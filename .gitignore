@@ -48,3 +48,7 @@ yarn-error.*
 
 # local IDE terminals
 terminals/
+
+# local AI / IDE tooling
+.claude/
+mcps/
