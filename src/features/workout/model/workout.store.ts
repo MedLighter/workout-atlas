@@ -393,9 +393,16 @@ export const useWorkoutStore = create<WorkoutState>()(
         weeklyProgram: state.weeklyProgram,
         selectedWeekday: state.selectedWeekday,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.warn('[workout-atlas] Failed to restore workout data, using defaults.', error);
+        }
+        useWorkoutStore.getState().setHydrated(true);
       },
     },
   ),
 );
+
+useWorkoutStore.persist.onFinishHydration(() => {
+  useWorkoutStore.getState().setHydrated(true);
+});

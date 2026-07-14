@@ -1,4 +1,5 @@
 import type { ImportExercise, ImportSet, WorkoutTemplateDocument } from './import.types';
+import { normalizeMediaUrl } from './import.url';
 
 const SET_LINE_REGEX =
   /^-\s*(warmup|working|drop|amrap|failure|backoff):\s*([\d.]+)\s*(kg|lb)?\s*x\s*(\d+)(?:\s*@RPE\s*([\d.]+))?/i;
@@ -34,7 +35,7 @@ function createMedia(url: string, role: 'exercise_demo' | 'muscle_map' = 'exerci
   return {
     role,
     format,
-    url: url.trim(),
+    url: normalizeMediaUrl(url),
     alt: role,
     priority: format === 'svg' ? 1 : 5,
   };

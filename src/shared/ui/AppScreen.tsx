@@ -42,15 +42,16 @@ export function AppScreen({
       <KeyboardAvoidingView
         className="flex-1 bg-zinc-950"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ paddingTop: insets.top }}
+        style={{ flex: 1, minHeight: 0, paddingTop: insets.top }}
       >
         <KeyboardFormScroll
           className="flex-1 bg-zinc-950"
+          style={{ flex: 1, minHeight: 0 }}
           contentContainerStyle={{ flexGrow: 1, ...(scrollProps?.contentContainerStyle as object) }}
           footerSpacing={bottomSpacing}
           {...scrollProps}
         >
-          <View className={`flex-1 ${paddingClass}`}>{children}</View>
+          <View className={paddingClass}>{children}</View>
         </KeyboardFormScroll>
       </KeyboardAvoidingView>
     );

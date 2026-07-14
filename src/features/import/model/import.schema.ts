@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isHttpMediaUrl, normalizeMediaUrl } from './import.url';
 import type {
   ImportValidationResult,
   ProgramImportDocument,
@@ -21,7 +22,13 @@ const mediaAssetSchema = z.object({
     .optional()
     .default('exercise_demo'),
   format: z.enum(['svg', 'lottie', 'webp', 'png', 'jpg', 'gif']),
-  url: z.string().url(),
+  url: z
+    .string()
+    .min(1)
+    .transform(normalizeMediaUrl)
+    .refine(isHttpMediaUrl, {
+      message: 'Некорректная ссылка на изображение (нужен http/https)',
+    }),
   alt: z.string().optional().default(''),
   priority: z.number().optional(),
   width: z.number().optional(),

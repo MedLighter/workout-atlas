@@ -14,7 +14,7 @@ export function WorkoutPreview({ document }: WorkoutPreviewProps) {
     const progression = document.progression;
 
     return (
-      <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-4">
+      <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2">
         <AppText variant="section" className="mb-1">
           {document.title}
         </AppText>
@@ -64,7 +64,7 @@ export function WorkoutPreview({ document }: WorkoutPreviewProps) {
   }
 
   return (
-    <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-4">
+    <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2">
       <AppText variant="section" className="mb-1">
         {document.title}
       </AppText>

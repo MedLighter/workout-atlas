@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppScreen } from '../../../shared/ui/AppScreen';
@@ -26,7 +26,12 @@ export function WorkoutScreen() {
   const weightIncrementKg = useSettingsStore((s) => s.weightIncrementKg);
   const weightIncrementLb = useSettingsStore((s) => s.weightIncrementLb);
   const targetRpe = useSettingsStore((s) => s.targetRpe);
-  const hydrated = useWorkoutStore((s) => s.hydrated);
+  const progressionCadence = useSettingsStore((s) => s.cadence);
+  const cadenceEverySessions = useSettingsStore((s) => s.cadenceEverySessions);
+  const storeHydrated = useWorkoutStore((s) => s.hydrated);
+  const [hydrated, setHydrated] = useState(
+    () => storeHydrated || useWorkoutStore.persist.hasHydrated(),
+  );
   const currentSession = useWorkoutStore((s) => s.currentSession);
   const weeklyProgram = useWorkoutStore((s) => s.weeklyProgram);
   const selectedWeekday = useWorkoutStore((s) => s.selectedWeekday);
@@ -59,6 +64,20 @@ export function WorkoutScreen() {
   const todayWeekday = getMondayFirstWeekday();
 
   useEffect(() => {
+    if (storeHydrated || useWorkoutStore.persist.hasHydrated()) {
+      setHydrated(true);
+    }
+
+    const unsub = useWorkoutStore.persist.onFinishHydration(() => setHydrated(true));
+    const fallback = setTimeout(() => setHydrated(true), 2500);
+
+    return () => {
+      unsub();
+      clearTimeout(fallback);
+    };
+  }, [storeHydrated]);
+
+  useEffect(() => {
     if (hydrated) {
       initSession();
     }
@@ -76,6 +95,8 @@ export function WorkoutScreen() {
     weightIncrementKg,
     weightIncrementLb,
     targetRpe,
+    cadence: progressionCadence,
+    cadenceEverySessions,
   };
   const progressionCount =
     currentSession?.exercises.filter((exercise) =>

@@ -12,10 +12,32 @@ export type KvStore = {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+function createLocalStorageFallback(): KvStore {
+  return {
+    getItem: async (name) => {
+      if (typeof localStorage === 'undefined') return null;
+      return localStorage.getItem(name);
+    },
+    setItem: async (name, value) => {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.setItem(name, value);
+    },
+    removeItem: async (name) => {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.removeItem(name);
+    },
+  };
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
 
   dbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB is unavailable'));
+      return;
+    }
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB'));
@@ -62,12 +84,22 @@ async function migrateFromLocalStorage(store: KvStore): Promise<void> {
 }
 
 export function createIndexedDbStore(): KvStore {
+  if (typeof indexedDB === 'undefined') {
+    return createLocalStorageFallback();
+  }
+
+  const fallback = createLocalStorageFallback();
   const store: KvStore = {
-    getItem: (name) => withStore('readonly', (objectStore) => objectStore.get(name)),
+    getItem: (name) =>
+      withStore('readonly', (objectStore) => objectStore.get(name)).catch(() => fallback.getItem(name)),
     setItem: (name, value) =>
-      withStore('readwrite', (objectStore) => objectStore.put(value, name)).then(() => undefined),
+      withStore('readwrite', (objectStore) => objectStore.put(value, name))
+        .then(() => undefined)
+        .catch(() => fallback.setItem(name, value)),
     removeItem: (name) =>
-      withStore('readwrite', (objectStore) => objectStore.delete(name)).then(() => undefined),
+      withStore('readwrite', (objectStore) => objectStore.delete(name))
+        .then(() => undefined)
+        .catch(() => fallback.removeItem(name)),
   };
 
   void migrateFromLocalStorage(store);
