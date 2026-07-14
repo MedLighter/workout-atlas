@@ -1,4 +1,4 @@
-import { Pressable, type PressableProps } from 'react-native';
+import { Platform, Pressable, type PressableProps } from 'react-native';
 import { AppText } from './AppText';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -35,7 +35,7 @@ export function AppButton({
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
-      className={`rounded-xl items-center justify-center ${compact ? 'px-3 py-2' : 'px-4 py-3.5'} ${variantClasses[variant]} ${disabled ? 'opacity-40' : ''} ${className ?? ''}`}
+      className={`rounded-xl items-center justify-center ${compact ? 'px-3 py-2' : 'px-4 py-3.5'} ${variantClasses[variant]} ${disabled ? 'opacity-40' : ''} ${Platform.OS === 'web' ? 'cursor-pointer' : ''} ${className ?? ''}`}
       {...props}
     >
       <AppText className={`text-sm ${textClasses[variant]}`}>{label}</AppText>

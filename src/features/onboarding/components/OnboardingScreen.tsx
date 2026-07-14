@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Dimensions, FlatList, View, type ViewToken } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Dimensions, FlatList, Platform, View, type ViewToken } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { AppScreen } from '../../../shared/ui/AppScreen';
@@ -159,6 +159,13 @@ export function OnboardingScreen() {
     }
   }).current;
 
+  const goToSlide = useCallback((nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= slides.length) return;
+
+    listRef.current?.scrollToOffset({ offset: width * nextIndex, animated: true });
+    setIndex(nextIndex);
+  }, []);
+
   const finish = (useDemo: boolean) => {
     completeOnboarding();
     if (useDemo) {
@@ -172,38 +179,50 @@ export function OnboardingScreen() {
   const isTrackingSlide = currentSlide?.kind === 'tracking';
 
   return (
-    <AppScreen padded={false}>
-      <FlatList
-        ref={listRef}
-        data={slides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        renderItem={({ item }) => (
-          <View style={{ width }} className="px-8 pt-12 justify-center">
-            <View className="items-center mb-6">
-              <SlideIllustration kind={item.kind} />
+    <AppScreen padded={false} className="justify-between">
+      <View className="flex-1 overflow-hidden">
+        <FlatList
+          ref={listRef}
+          data={slides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+          getItemLayout={(_, slideIndex) => ({
+            length: width,
+            offset: width * slideIndex,
+            index: slideIndex,
+          })}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          renderItem={({ item }) => (
+            <View style={{ width }} className="px-8 pt-12 justify-center">
+              <View className="items-center mb-6" pointerEvents="none">
+                <SlideIllustration kind={item.kind} />
+              </View>
+              <AppText variant="title" className="mb-3 text-center">
+                {item.title}
+              </AppText>
+              <AppText variant="body" muted className="text-center mb-4">
+                {item.subtitle}
+              </AppText>
+              {item.kind === 'tracking' ? (
+                <TrackingModePicker
+                  value={trackingMode}
+                  onChange={(mode: TrackingMode) => setTrackingMode(mode)}
+                />
+              ) : null}
             </View>
-            <AppText variant="title" className="mb-3 text-center">
-              {item.title}
-            </AppText>
-            <AppText variant="body" muted className="text-center mb-4">
-              {item.subtitle}
-            </AppText>
-            {item.kind === 'tracking' ? (
-              <TrackingModePicker
-                value={trackingMode}
-                onChange={(mode: TrackingMode) => setTrackingMode(mode)}
-              />
-            ) : null}
-          </View>
-        )}
-      />
+          )}
+        />
+      </View>
 
-      <View className="px-8 pb-10">
+      <View
+        className="px-8 pb-10 bg-zinc-950"
+        style={Platform.OS === 'web' ? { zIndex: 10, position: 'relative' as const } : undefined}
+      >
         <View className="flex-row justify-center gap-2 mb-6">
           {slides.map((slide, i) => (
             <View
@@ -229,7 +248,7 @@ export function OnboardingScreen() {
         ) : (
           <AppButton
             label={isTrackingSlide ? 'Выбрал — далее' : 'Далее'}
-            onPress={() => listRef.current?.scrollToIndex({ index: index + 1, animated: true })}
+            onPress={() => goToSlide(index + 1)}
           />
         )}
       </View>

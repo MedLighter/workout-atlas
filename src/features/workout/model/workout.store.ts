@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import Storage from 'expo-sqlite/kv-store';
+import Storage from '../../../shared/storage/kv-store';
+import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import { mockWorkoutSession } from './workout.mock';
 import {
   defaultWeeklyProgram,
@@ -9,6 +10,11 @@ import {
 } from './workout.schedule';
 import { defaultTemplates } from './workout.templates';
 import type { Exercise, WeeklyProgram, WorkoutSession, WorkoutSet } from './workout.types';
+import { useSettingsStore } from '../../settings/model/settings.store';
+import {
+  applyProgressionToSession,
+  syncTemplateExerciseFromPerformance,
+} from '../utils/progression';
 import { getExerciseStatus } from '../utils/workoutStatus';
 
 interface WorkoutState {
@@ -27,6 +33,7 @@ interface WorkoutState {
   addTemplate: (session: WorkoutSession) => void;
   selectWeekday: (weekday: number) => void;
   loadWorkoutForWeekday: (weekday: number) => void;
+  startUnplannedWorkout: () => void;
   updateScheduleDay: (weekday: number, update: ScheduleDayUpdate) => void;
   setProgramName: (name: string) => void;
   resetWeeklyProgram: () => void;
@@ -37,6 +44,7 @@ interface WorkoutState {
   closeAtlas: () => void;
   updateSet: (exerciseId: string, setId: string, patch: Partial<WorkoutSet>) => void;
   copyLastSet: (exerciseId: string, setId: string) => void;
+  applyProgressionSet: (exerciseId: string, setId: string) => void;
   addSet: (exerciseId: string) => void;
   toggleExerciseSimple: (exerciseId: string) => void;
   skipExercise: (exerciseId: string) => void;
@@ -63,6 +71,36 @@ function syncSession(session: WorkoutSession): WorkoutSession {
 
 function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function getProgressionSettings() {
+  const settings = useSettingsStore.getState();
+  return {
+    enabled: settings.enabled,
+    mode: settings.mode,
+    weightIncrementKg: settings.weightIncrementKg,
+    weightIncrementLb: settings.weightIncrementLb,
+    targetRpe: settings.targetRpe,
+  };
+}
+
+function withProgression(session: WorkoutSession, completedSessions: WorkoutSession[]): WorkoutSession {
+  return applyProgressionToSession(session, completedSessions, getProgressionSettings());
+}
+
+function createSessionFromTemplate(
+  template: WorkoutSession,
+  title = template.title,
+): WorkoutSession {
+  const today = new Date().toISOString().split('T')[0];
+  return syncSession({
+    ...JSON.parse(JSON.stringify(template)),
+    id: createId('session'),
+    title,
+    date: today,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -105,16 +143,24 @@ export const useWorkoutStore = create<WorkoutState>()(
           return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
         set({
           selectedWeekday: weekday,
-          currentSession: syncSession({
-            ...JSON.parse(JSON.stringify(template)),
-            id: createId('session'),
-            date: today,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }),
+          currentSession: withProgression(
+            createSessionFromTemplate(template),
+            get().completedSessions,
+          ),
+          expandedExerciseId: null,
+        });
+      },
+      startUnplannedWorkout: () => {
+        const { templates, completedSessions } = get();
+        const template = templates[0] ?? mockWorkoutSession;
+
+        set({
+          currentSession: withProgression(
+            createSessionFromTemplate(template, 'Внеплановая тренировка'),
+            completedSessions,
+          ),
           expandedExerciseId: null,
         });
       },
@@ -168,6 +214,28 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { ...state, currentSession: session };
         }),
       copyLastSet: (exerciseId, setId) =>
+        set((state) => {
+          if (!state.currentSession) return state;
+          const session = syncSession({
+            ...state.currentSession,
+            exercises: state.currentSession.exercises.map((exercise) => {
+              if (exercise.id !== exerciseId) return exercise;
+              return syncExerciseStatus({
+                ...exercise,
+                sets: exercise.sets.map((workoutSet) => {
+                  if (workoutSet.id !== setId) return workoutSet;
+                  return {
+                    ...workoutSet,
+                    weight: workoutSet.previousWeight,
+                    reps: workoutSet.previousReps,
+                  };
+                }),
+              });
+            }),
+          });
+          return { ...state, currentSession: session };
+        }),
+      applyProgressionSet: (exerciseId, setId) =>
         set((state) => {
           if (!state.currentSession) return state;
           const session = syncSession({
@@ -251,16 +319,42 @@ export const useWorkoutStore = create<WorkoutState>()(
         set((state) => {
           if (!state.currentSession) return state;
           const finished = syncSession(state.currentSession);
+          const day = state.weeklyProgram.days.find((item) => item.weekday === state.selectedWeekday);
+          const templateId = day?.templateId;
+
+          const templates = templateId
+            ? state.templates.map((template) => {
+                if (template.id !== templateId) return template;
+                return syncSession({
+                  ...template,
+                  exercises: template.exercises.map((templateExercise) => {
+                    const performed = finished.exercises.find(
+                      (exercise) => exercise.name === templateExercise.name,
+                    );
+                    if (!performed) return templateExercise;
+                    return syncTemplateExerciseFromPerformance(
+                      templateExercise,
+                      performed,
+                      finished.date,
+                      () => createId('hist'),
+                    );
+                  }),
+                  updatedAt: new Date().toISOString(),
+                });
+              })
+            : state.templates;
+
           return {
             currentSession: null,
             completedSessions: [finished, ...state.completedSessions],
+            templates,
             expandedExerciseId: null,
             atlasExerciseId: null,
           };
         }),
     }),
     {
-      name: 'workout-atlas-data',
+      name: STORAGE_KEYS.workout,
       storage: kvStorage,
       partialize: (state) => ({
         currentSession: state.currentSession,

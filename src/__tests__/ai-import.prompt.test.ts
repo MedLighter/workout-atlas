@@ -3,6 +3,7 @@ import {
   buildAiImportCopyPackage,
   buildAiImportJsonExample,
   buildAiImportMarkdownExample,
+  buildAiImportProgressionGuide,
   buildAiImportPrompt,
 } from '../features/import/model/ai-import.prompt';
 import { validateWorkoutImport } from '../features/import/model/import.schema';
@@ -22,6 +23,13 @@ describe('ai import prompt kit', () => {
     expect(kit).toContain('ПРИМЕР MARKDOWN');
     expect(kit).toContain('СПРАВОЧНИК ПОЛЕЙ');
     expect(kit).toContain('ПРАВИЛА ВАЛИДАЦИИ');
+    expect(kit).toContain('ПРОГРЕССИЯ НАГРУЗКИ');
+  });
+
+  it('includes progression guidance in prompt and guide', () => {
+    expect(buildAiImportPrompt('kg')).toContain('Прогрессия');
+    expect(buildAiImportProgressionGuide('kg')).toContain('rpe');
+    expect(buildAiImportJsonExample('kg')).toContain('База:');
   });
 
   it('provides valid json example', () => {
@@ -39,7 +47,7 @@ describe('ai import prompt kit', () => {
   });
 
   it('exposes copyable sections', () => {
-    expect(AI_IMPORT_SECTIONS.length).toBeGreaterThanOrEqual(5);
+    expect(AI_IMPORT_SECTIONS.length).toBeGreaterThanOrEqual(6);
     expect(AI_IMPORT_SECTIONS[0].getContent('kg').length).toBeGreaterThan(100);
   });
 });

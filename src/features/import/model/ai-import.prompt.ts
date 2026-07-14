@@ -46,11 +46,41 @@ export function buildAiImportPrompt(unit: WorkoutUnit = 'kg'): string {
 - format: svg предпочтителен, иначе webp или png.
 - Пример: { "role": "exercise_demo", "format": "svg", "url": "https://...", "alt": "Жим лежа" }
 
+Прогрессия (важно для Workout Atlas):
+- Указывай rpe на каждом рабочем подходе — приложение использует RPE для авто-прогрессии.
+- weight и reps в шаблоне — стартовая база первой недели, не максимум на отказ.
+- Для базовых упражнений делай 2-3 рабочих подхода с одинаковым весом и повторами.
+- Используй одинаковые name упражнений в разных тренировках одной программы (для связки истории).
+- Добавляй notes у упражнения с краткой логикой прогрессии, напр.: "Старт 80×6 @RPE 8, дальше +2.5 кг если все подходы закрыты".
+- Не завышай стартовый вес: рабочие подходы должны ощущаться как RPE 7-8.5.
+
 Безопасность:
 - Не добавляй опасные или экстремальные рекомендации.
 - Для тяжёлых базовых упражнений добавляй safetyNotes.
 
 Если пользователь не указал детали — предложи сбалансированную тренировку на 4-6 упражнений.`;
+}
+
+export function buildAiImportProgressionGuide(unit: WorkoutUnit = 'kg'): string {
+  return `Прогрессия в Workout Atlas
+
+Как приложение использует импорт:
+1. Первый раз пользователь выполняет веса из шаблона.
+2. После завершения тренировки веса сохраняются в историю.
+3. На следующей тренировке с тем же упражнением (то же name) Atlas предлагает новую цель.
+
+Что важно заложить в JSON/Markdown:
+- rpe на каждом working-подходе (1-10).
+- Одинаковые name для одного и того же упражнения в программе (например, "Жим лежа" везде одинаково).
+- notes с логикой прогрессии: стартовая база, шаг (+2.5 ${unit} / +5 ${unit}), условие повышения.
+- 2-3 рабочих подхода с одинаковым weight/reps — удобнее для линейной прогрессии.
+
+Режимы прогрессии в приложении:
+- Линейная: все рабочие подходы закрыты → +шаг к весу.
+- По RPE: RPE ниже цели → +шаг; выше → снижение или удержание.
+
+Рекомендуемая формулировка в notes:
+"База: 80 ${unit} × 6 @RPE 8. Если все рабочие подходы выполнены — следующий раз 82.5 ${unit} × 6."`;
 }
 
 export function buildAiImportJsonExample(unit: WorkoutUnit = 'kg'): string {
@@ -71,6 +101,8 @@ export function buildAiImportJsonExample(unit: WorkoutUnit = 'kg'): string {
           equipment: ['Штанга', 'Скамья'],
           restSec: 180,
           techniqueTips: ['Лопатки сведены', 'Контролируемое опускание'],
+          notes:
+            `База: 80 ${unit} × 6 @RPE 8. Если все рабочие подходы закрыты — следующий раз 82.5 ${unit} × 6.`,
           safetyNotes: ['Используй страховку на тяжёлых подходах'],
           images: [
             {
@@ -97,6 +129,7 @@ export function buildAiImportJsonExample(unit: WorkoutUnit = 'kg'): string {
           muscleGroups: ['Квадрицепс', 'Ягодицы'],
           equipment: ['Штанга', 'Стойки'],
           restSec: 180,
+          notes: `База: 100 ${unit} × 5 @RPE 8. Прогрессия +2.5 ${unit} при RPE ≤ 7 на всех рабочих.`,
           safetyNotes: ['Следи за нейтральной спиной'],
           images: [
             {
@@ -130,6 +163,7 @@ Duration: 75
 Muscles: Грудь, Трицепс, Передние дельты
 Equipment: Штанга, Скамья
 Rest: 180
+Notes: База 80 ${unit} × 6 @RPE 8, дальше +2.5 ${unit} если все рабочие закрыты
 Image: https://example.com/bench-press.svg
 MuscleMap: https://example.com/chest-muscles.svg
 Sets:
@@ -173,10 +207,15 @@ export const AI_IMPORT_FIELD_REFERENCE = `Справочник полей Workou
 
 Подход (set):
 - type — warmup | working | drop | amrap | failure | backoff
-- weight — число
+- weight — число (стартовая база, не 1ПМ)
 - reps — число
-- rpe — число 1-10
+- rpe — число 1-10 (обязательно на working для прогрессии)
 - notes — строка
+
+Прогрессия:
+- notes на уровне упражнения — логика повышения веса
+- одинаковые name упражнений в программе — для связки истории
+- working-подходы с rpe — для режима прогрессии по RPE
 
 Медиа (image):
 - role — exercise_demo | muscle_map | thumbnail | equipment | technique | cover | fallback
@@ -198,6 +237,8 @@ export const AI_IMPORT_VALIDATION_RULES = `Правила валидации в 
 - Нет restSec у упражнения
 - Нет images у упражнения
 - Нет SVG — будет использован fallback (webp/png)
+- Нет rpe на рабочих подходах — прогрессия по RPE будет менее точной
+- Нет notes с логикой прогрессии — пользователь не увидит план роста нагрузки
 
 Поддерживаемые форматы вставки:
 - JSON (строгий режим, рекомендуется для AI)
@@ -259,6 +300,12 @@ export const AI_IMPORT_SECTIONS: AiImportSection[] = [
     description: 'Что блокирует импорт, а что даёт предупреждения',
     getContent: () => AI_IMPORT_VALIDATION_RULES,
   },
+  {
+    id: 'progression',
+    title: 'Прогрессия нагрузки',
+    description: 'Как AI должен закладывать рост веса в шаблон',
+    getContent: buildAiImportProgressionGuide,
+  },
 ];
 
 export function buildAiImportCopyPackage(unit: WorkoutUnit = 'kg'): string {
@@ -272,6 +319,7 @@ export function buildAiImportCopyPackage(unit: WorkoutUnit = 'kg'): string {
     '1. Вставь этот текст целиком в AI-чат.',
     '2. Добавь описание тренировки: цель, уровень, оборудование, длительность.',
     '3. Скопируй JSON-ответ и вставь в Workout Atlas → Import.',
+    '4. После первой тренировки Atlas сам предложит следующую цель по весу.',
     '',
     ...AI_IMPORT_SECTIONS.flatMap((section) => [
       '---',

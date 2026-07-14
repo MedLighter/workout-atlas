@@ -10,6 +10,7 @@
     "expo-font": "~57.0.0",
     "expo-linking": "~57.0.2",
     "expo-router": "~57.0.4",
+    "expo-splash-screen": "~57.0.2",
     "expo-sqlite": "~57.0.0",
     "expo-status-bar": "~57.0.0",
     "nativewind": "^4.2.6",
@@ -33,7 +34,8 @@
     "babel-preset-expo": "^57.0.2",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.11",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "workbox-cli": "^7.3.0"
   },
   "scripts": {
     "start": "expo start",
@@ -43,7 +45,15 @@
     "test": "jest",
     "prebuild:android": "expo prebuild --platform android --clean",
     "build:apk": "expo prebuild --platform android && cd android && gradlew.bat assembleRelease",
-    "build:apk:debug": "expo prebuild --platform android && cd android && gradlew.bat assembleDebug"
+    "build:apk:debug": "expo prebuild --platform android && cd android && gradlew.bat assembleDebug",
+    "build:android:eas": "eas build --platform android --profile preview",
+    "build:android:prod": "eas build --platform android --profile production",
+    "export:web": "expo export -p web",
+    "build:web": "expo export -p web && workbox generateSW workbox-config.js && node scripts/prepare-github-pages.mjs",
+    "build:pwa": "npm run build:web",
+    "build:github-pages": "node scripts/build-github-pages.mjs",
+    "preview:pwa": "npx --yes serve dist -p 4173",
+    "preview:github-pages": "npm run build:github-pages && npx --yes serve dist -p 4173"
   },
   "private": true
 }

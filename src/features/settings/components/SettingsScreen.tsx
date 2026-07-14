@@ -7,6 +7,8 @@ import { TrackingModePicker } from '../../../shared/ui/TrackingModePicker';
 import { useSettingsStore } from '../model/settings.store';
 import { useWorkoutStore } from '../../workout/model/workout.store';
 import { AiImportPromptSection } from './AiImportPromptSection';
+import { DataBackupSection } from './DataBackupSection';
+import { ProgressionSection } from './ProgressionSection';
 
 export function SettingsScreen() {
   const router = useRouter();
@@ -84,6 +86,8 @@ export function SettingsScreen() {
         <AppButton label="Изменить план недели" variant="secondary" onPress={handleEditPlan} />
       </View>
 
+      <ProgressionSection />
+
       <View className="mb-6">
         <AppText variant="section" className="mb-1">
           Таймер отдыха
@@ -104,6 +108,8 @@ export function SettingsScreen() {
           ))}
         </View>
       </View>
+
+      <DataBackupSection />
 
       <AiImportPromptSection unit={unit} />
 

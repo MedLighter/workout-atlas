@@ -2,7 +2,9 @@ import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Exercise } from '../model/workout.types';
+import type { ProgressionSuggestion } from '../model/progression.types';
 import { selectEstimatedOneRm } from '../model/workout.selectors';
+import { ProgressionCard } from './ProgressionCard';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
 import { MediaAssetView } from '../../media/components/MediaAssetView';
@@ -11,10 +13,17 @@ interface AnalyticsModalProps {
   visible: boolean;
   exercise: Exercise | null;
   unit: string;
+  progressionSuggestion?: ProgressionSuggestion | null;
   onClose: () => void;
 }
 
-export function AnalyticsModal({ visible, exercise, unit, onClose }: AnalyticsModalProps) {
+export function AnalyticsModal({
+  visible,
+  exercise,
+  unit,
+  progressionSuggestion,
+  onClose,
+}: AnalyticsModalProps) {
   const { bottom } = useSafeAreaInsets();
 
   if (!exercise) return null;
@@ -80,6 +89,15 @@ export function AnalyticsModal({ visible, exercise, unit, onClose }: AnalyticsMo
                 <AppText variant="row" className="text-emerald-400">
                   {oneRm} {unit}
                 </AppText>
+              </View>
+            ) : null}
+
+            {progressionSuggestion ? (
+              <View className="mb-3">
+                <AppText variant="caption" muted className="mb-2">
+                  Прогрессия на следующий раз
+                </AppText>
+                <ProgressionCard suggestion={progressionSuggestion} unit={unit} variant="full" />
               </View>
             ) : null}
 

@@ -5,8 +5,9 @@ import { AppScreen } from '../../../shared/ui/AppScreen';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
 import { useWorkoutStore } from '../model/workout.store';
-import { selectWorkoutProgress } from '../model/workout.selectors';
+import { selectProgressionSuggestion, selectWorkoutProgress } from '../model/workout.selectors';
 import { ProgressStrip } from './ProgressStrip';
+import { WorkoutProgressionStrip } from './WorkoutProgressionStrip';
 import { ExerciseRow } from './ExerciseRow';
 import { AnalyticsModal } from './AnalyticsModal';
 import { WeekPlanStrip } from './WeekPlanStrip';
@@ -20,6 +21,11 @@ export function WorkoutScreen() {
   const { bottom } = useSafeAreaInsets();
   const unit = useSettingsStore((s) => s.unit);
   const trackingMode = useSettingsStore((s) => s.trackingMode);
+  const progressionEnabled = useSettingsStore((s) => s.enabled);
+  const progressionMode = useSettingsStore((s) => s.mode);
+  const weightIncrementKg = useSettingsStore((s) => s.weightIncrementKg);
+  const weightIncrementLb = useSettingsStore((s) => s.weightIncrementLb);
+  const targetRpe = useSettingsStore((s) => s.targetRpe);
   const hydrated = useWorkoutStore((s) => s.hydrated);
   const currentSession = useWorkoutStore((s) => s.currentSession);
   const weeklyProgram = useWorkoutStore((s) => s.weeklyProgram);
@@ -29,6 +35,7 @@ export function WorkoutScreen() {
   const initSession = useWorkoutStore((s) => s.initSession);
   const selectWeekday = useWorkoutStore((s) => s.selectWeekday);
   const loadWorkoutForWeekday = useWorkoutStore((s) => s.loadWorkoutForWeekday);
+  const startUnplannedWorkout = useWorkoutStore((s) => s.startUnplannedWorkout);
   const toggleExpanded = useWorkoutStore((s) => s.toggleExpanded);
   const openAtlas = useWorkoutStore((s) => s.openAtlas);
   const closeAtlas = useWorkoutStore((s) => s.closeAtlas);
@@ -45,6 +52,7 @@ export function WorkoutScreen() {
   const planEditorOpen = useWorkoutStore((s) => s.planEditorOpen);
   const openPlanEditor = useWorkoutStore((s) => s.openPlanEditor);
   const closePlanEditor = useWorkoutStore((s) => s.closePlanEditor);
+  const completedSessions = useWorkoutStore((s) => s.completedSessions);
 
   const selectedDay = weeklyProgram.days.find((day) => day.weekday === selectedWeekday);
   const isRestDay = selectedDay?.type === 'rest';
@@ -62,6 +70,22 @@ export function WorkoutScreen() {
   };
 
   const progress = selectWorkoutProgress(currentSession);
+  const progressionSettings = {
+    enabled: progressionEnabled,
+    mode: progressionMode,
+    weightIncrementKg,
+    weightIncrementLb,
+    targetRpe,
+  };
+  const progressionCount =
+    currentSession?.exercises.filter((exercise) =>
+      selectProgressionSuggestion(
+        exercise,
+        completedSessions,
+        progressionSettings,
+        currentSession.unit,
+      ),
+    ).length ?? 0;
   const atlasExercise =
     currentSession?.exercises.find((exercise) => exercise.id === atlasExerciseId) ?? null;
 
@@ -100,35 +124,14 @@ export function WorkoutScreen() {
         onEdit={openPlanEditor}
       />
 
-      {isRestDay ? (
-        <View className="flex-1 px-5 items-center justify-center">
-          <AppText variant="section" className="mb-2 text-center">
-            Сегодня восстановление
-          </AppText>
-          <AppText variant="body" muted className="text-center mb-5">
-            Отдых — часть программы. Выбери другой день в плане или начни внеплановую тренировку.
-          </AppText>
-          <AppButton
-            label="Внеплановая тренировка"
-            variant="secondary"
-            onPress={() => loadWorkoutForWeekday(0)}
-          />
-        </View>
-      ) : !currentSession ? (
-        <View className="flex-1 px-5 items-center justify-center gap-3">
-          <AppText variant="section">Нет активной тренировки</AppText>
-          <AppText variant="body" muted className="text-center">
-            Выбери день с тренировкой в плане или импортируй из AI
-          </AppText>
-          <AppButton label="Загрузить Full Body A" onPress={() => loadWorkoutForWeekday(0)} />
-        </View>
-      ) : (
+      {currentSession ? (
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
           <View className="px-5 pb-3">
+            <WorkoutProgressionStrip count={progressionEnabled ? progressionCount : 0} />
             <ProgressStrip {...progress} />
           </View>
 
@@ -147,6 +150,12 @@ export function WorkoutScreen() {
                 exercise={item}
                 unit={currentSession.unit}
                 trackingMode={trackingMode}
+                progressionSuggestion={selectProgressionSuggestion(
+                  item,
+                  completedSessions,
+                  progressionSettings,
+                  currentSession.unit,
+                )}
                 expanded={expandedExerciseId === item.id}
                 onToggle={() => toggleExpanded(item.id)}
                 onOpenAtlas={() => openAtlas(item.id)}
@@ -168,12 +177,47 @@ export function WorkoutScreen() {
             </View>
           ) : null}
         </KeyboardAvoidingView>
+      ) : isRestDay ? (
+        <View className="flex-1 px-5 items-center justify-center">
+          <AppText variant="section" className="mb-2 text-center">
+            Сегодня восстановление
+          </AppText>
+          <AppText variant="body" muted className="text-center mb-5">
+            Отдых — часть программы. Выбери другой день в плане или начни внеплановую тренировку.
+          </AppText>
+          <AppButton
+            label="Внеплановая тренировка"
+            variant="secondary"
+            onPress={startUnplannedWorkout}
+          />
+        </View>
+      ) : (
+        <View className="flex-1 px-5 items-center justify-center gap-3">
+          <AppText variant="section">Нет активной тренировки</AppText>
+          <AppText variant="body" muted className="text-center">
+            Выбери день с тренировкой в плане или импортируй из AI
+          </AppText>
+          <AppButton
+            label="Загрузить тренировку"
+            onPress={() => loadWorkoutForWeekday(selectedWeekday)}
+          />
+        </View>
       )}
 
       <AnalyticsModal
         visible={!!atlasExerciseId}
         exercise={atlasExercise}
         unit={currentSession?.unit ?? unit}
+        progressionSuggestion={
+          atlasExercise
+            ? selectProgressionSuggestion(
+                atlasExercise,
+                completedSessions,
+                progressionSettings,
+                currentSession?.unit ?? unit,
+              )
+            : null
+        }
         onClose={closeAtlas}
       />
 

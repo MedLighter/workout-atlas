@@ -1,12 +1,18 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import Storage from 'expo-sqlite/kv-store';
+import Storage from '../../../shared/storage/kv-store';
+import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import type { TrackingMode, WorkoutUnit } from '../../workout/model/workout.types';
+import {
+  DEFAULT_PROGRESSION_SETTINGS,
+  type ProgressionMode,
+  type ProgressionSettings,
+} from '../../workout/model/progression.types';
 import { AI_IMPORT_PROMPT, buildAiImportPrompt } from '../../import/model/ai-import.prompt';
 
 export { AI_IMPORT_PROMPT };
 
-interface SettingsState {
+interface SettingsState extends ProgressionSettings {
   unit: WorkoutUnit;
   restTimerSec: number;
   trackingMode: TrackingMode;
@@ -15,6 +21,11 @@ interface SettingsState {
   setUnit: (unit: WorkoutUnit) => void;
   setRestTimerSec: (seconds: number) => void;
   setTrackingMode: (mode: TrackingMode) => void;
+  setProgressionEnabled: (enabled: boolean) => void;
+  setProgressionMode: (mode: ProgressionMode) => void;
+  setWeightIncrementKg: (value: number) => void;
+  setWeightIncrementLb: (value: number) => void;
+  setTargetRpe: (value: number) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
 }
@@ -33,6 +44,7 @@ export const useSettingsStore = create<SettingsState>()(
       trackingMode: 'detailed',
       onboardingComplete: false,
       aiImportPrompt: AI_IMPORT_PROMPT,
+      ...DEFAULT_PROGRESSION_SETTINGS,
       setUnit: (unit) =>
         set({
           unit,
@@ -40,11 +52,16 @@ export const useSettingsStore = create<SettingsState>()(
         }),
       setRestTimerSec: (seconds) => set({ restTimerSec: seconds }),
       setTrackingMode: (mode) => set({ trackingMode: mode }),
+      setProgressionEnabled: (enabled) => set({ enabled }),
+      setProgressionMode: (mode) => set({ mode }),
+      setWeightIncrementKg: (value) => set({ weightIncrementKg: value }),
+      setWeightIncrementLb: (value) => set({ weightIncrementLb: value }),
+      setTargetRpe: (value) => set({ targetRpe: value }),
       completeOnboarding: () => set({ onboardingComplete: true }),
       resetOnboarding: () => set({ onboardingComplete: false }),
     }),
     {
-      name: 'workout-atlas-settings',
+      name: STORAGE_KEYS.settings,
       storage: kvStorage,
     },
   ),

@@ -1,7 +1,8 @@
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
-import type { Exercise } from '../model/workout.types';
-import type { TrackingMode } from '../model/workout.types';
+import type { Exercise, TrackingMode } from '../model/workout.types';
+import type { ProgressionSuggestion } from '../model/progression.types';
+import { ProgressionCard } from './ProgressionCard';
 import { getExerciseStatus } from '../utils/workoutStatus';
 import { AppText } from '../../../shared/ui/AppText';
 import { ExerciseStatusPill } from './ExerciseStatusPill';
@@ -14,6 +15,7 @@ interface ExerciseRowProps {
   exercise: Exercise;
   unit: string;
   trackingMode: TrackingMode;
+  progressionSuggestion?: ProgressionSuggestion | null;
   expanded: boolean;
   onToggle: () => void;
   onOpenAtlas: () => void;
@@ -28,6 +30,7 @@ export function ExerciseRow({
   exercise,
   unit,
   trackingMode,
+  progressionSuggestion,
   expanded,
   onToggle,
   onOpenAtlas,
@@ -80,6 +83,9 @@ export function ExerciseRow({
                   {exercise.muscleGroups.slice(0, 2).join(' · ')}
                 </AppText>
               ) : null}
+              {!expanded && progressionSuggestion ? (
+                <ProgressionCard suggestion={progressionSuggestion} unit={unit} variant="compact" />
+              ) : null}
             </View>
 
             <View className="items-end gap-2">
@@ -104,12 +110,17 @@ export function ExerciseRow({
             exiting={FadeOutUp.duration(180)}
             className="px-4 pb-4 border-t border-zinc-800/80"
           >
+            {progressionSuggestion ? (
+              <ProgressionCard suggestion={progressionSuggestion} unit={unit} variant="full" />
+            ) : null}
             {exercise.sets.map((set, index) => (
               <SetRow
                 key={set.id}
                 index={index}
                 set={set}
                 unit={unit}
+                hasProgression={!!progressionSuggestion}
+                progressionSuggestion={progressionSuggestion}
                 onUpdate={(patch) => onUpdateSet(set.id, patch)}
                 onCopyLast={() => onCopyLast(set.id)}
               />

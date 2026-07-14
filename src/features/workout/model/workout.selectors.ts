@@ -1,6 +1,9 @@
 import type { Exercise, WorkoutSession } from './workout.types';
+import type { ProgressionSettings, ProgressionSuggestion } from './progression.types';
 import { formatOneRepMax } from '../utils/oneRepMax';
+import { calculateProgressionSuggestion } from '../utils/progression';
 import { getExerciseStatus, getWorkoutProgress } from '../utils/workoutStatus';
+import type { WorkoutUnit } from './workout.types';
 
 export function selectWorkoutProgress(session: WorkoutSession | null) {
   if (!session) {
@@ -44,4 +47,13 @@ export function selectEstimatedOneRm(exercise: Exercise): string | null {
     return null;
   }
   return formatOneRepMax(best.weight, best.reps);
+}
+
+export function selectProgressionSuggestion(
+  exercise: Exercise,
+  completedSessions: WorkoutSession[],
+  settings: ProgressionSettings,
+  unit: WorkoutUnit,
+): ProgressionSuggestion | null {
+  return calculateProgressionSuggestion(exercise, completedSessions, settings, unit);
 }
