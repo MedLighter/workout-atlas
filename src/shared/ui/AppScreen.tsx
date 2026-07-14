@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardFormScroll } from './KeyboardFormScroll';
+import { useTabBarHeight } from '../theme/layout';
 
 interface AppScreenProps {
   children: ReactNode;
@@ -9,6 +10,8 @@ interface AppScreenProps {
   scrollProps?: ScrollViewProps;
   className?: string;
   padded?: boolean;
+  reserveTabBar?: boolean;
+  extraBottomSpacing?: number;
 }
 
 export function AppScreen({
@@ -17,8 +20,13 @@ export function AppScreen({
   scrollProps,
   className,
   padded = true,
+  reserveTabBar = false,
+  extraBottomSpacing = 0,
 }: AppScreenProps) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
+  const bottomSpacing =
+    insets.bottom + 16 + (reserveTabBar ? tabBarHeight : 0) + extraBottomSpacing;
   const paddingClass = padded ? 'px-5' : '';
   const content = (
     <View
@@ -39,7 +47,7 @@ export function AppScreen({
         <KeyboardFormScroll
           className="flex-1 bg-zinc-950"
           contentContainerStyle={{ flexGrow: 1, ...(scrollProps?.contentContainerStyle as object) }}
-          footerSpacing={insets.bottom + 16}
+          footerSpacing={bottomSpacing}
           {...scrollProps}
         >
           <View className={`flex-1 ${paddingClass}`}>{children}</View>

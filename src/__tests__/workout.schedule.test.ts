@@ -27,7 +27,7 @@ describe('workout schedule', () => {
   it('updates a day to rest', () => {
     const updated = updateProgramDay(defaultWeeklyProgram, 0, { type: 'rest' });
     expect(updated.days[0]).toMatchObject({ type: 'rest', title: 'Отдых' });
-    expect(updated.name).toBe(defaultWeeklyProgram.name);
+    expect(updated.name).toBe('2x в неделю');
   });
 
   it('assigns workout template to a day', () => {

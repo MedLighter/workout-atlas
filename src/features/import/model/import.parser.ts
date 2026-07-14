@@ -1,5 +1,9 @@
 import type { WorkoutSession } from '../../workout/model/workout.types';
-import type { ImportValidationResult, WorkoutImportDocument } from './import.types';
+import type {
+  ImportValidationResult,
+  WorkoutImportDocument,
+  WorkoutTemplateDocument,
+} from './import.types';
 import { validateWorkoutImport } from './import.schema';
 import { parseWorkoutMarkdown } from './markdown.parser';
 
@@ -47,7 +51,7 @@ function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function transformImportToWorkoutSession(document: WorkoutImportDocument): WorkoutSession {
+export function transformImportToWorkoutSession(document: WorkoutTemplateDocument): WorkoutSession {
   const now = new Date().toISOString();
   const today = now.split('T')[0];
 

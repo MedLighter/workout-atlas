@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import { mockWorkoutSession } from './workout.mock';
 import {
   defaultWeeklyProgram,
+  getMondayFirstWeekday,
   type ScheduleDayUpdate,
   updateProgramDay,
 } from './workout.schedule';
@@ -31,11 +32,13 @@ interface WorkoutState {
   initSession: () => void;
   setCurrentSession: (session: WorkoutSession) => void;
   addTemplate: (session: WorkoutSession) => void;
+  importWeeklyProgram: (templates: WorkoutSession[], program: WeeklyProgram) => void;
   selectWeekday: (weekday: number) => void;
   loadWorkoutForWeekday: (weekday: number) => void;
   startUnplannedWorkout: () => void;
   updateScheduleDay: (weekday: number, update: ScheduleDayUpdate) => void;
   setProgramName: (name: string) => void;
+  setWeeklyProgram: (program: WeeklyProgram) => void;
   resetWeeklyProgram: () => void;
   openPlanEditor: () => void;
   closePlanEditor: () => void;
@@ -81,6 +84,8 @@ function getProgressionSettings() {
     weightIncrementKg: settings.weightIncrementKg,
     weightIncrementLb: settings.weightIncrementLb,
     targetRpe: settings.targetRpe,
+    cadence: settings.cadence ?? 'every_session',
+    cadenceEverySessions: settings.cadenceEverySessions ?? 2,
   };
 }
 
@@ -179,6 +184,10 @@ export const useWorkoutStore = create<WorkoutState>()(
             name: name.trim() || state.weeklyProgram.name,
           },
         })),
+      setWeeklyProgram: (program) => {
+        set({ weeklyProgram: program });
+        get().loadWorkoutForWeekday(get().selectedWeekday);
+      },
       resetWeeklyProgram: () => {
         set({ weeklyProgram: defaultWeeklyProgram });
         get().loadWorkoutForWeekday(get().selectedWeekday);
@@ -190,6 +199,27 @@ export const useWorkoutStore = create<WorkoutState>()(
         set((state) => ({
           templates: [syncSession(session), ...state.templates.filter((t) => t.id !== session.id)],
         })),
+      importWeeklyProgram: (templates, program) => {
+        const today = getMondayFirstWeekday();
+        const todayPlan = program.days.find((day) => day.weekday === today);
+        const targetWeekday =
+          todayPlan?.type === 'workout'
+            ? today
+            : (program.days.find((day) => day.type === 'workout')?.weekday ?? today);
+
+        set((state) => {
+          const merged = [...templates.map(syncSession)];
+          const existing = state.templates.filter(
+            (template) => !merged.some((item) => item.id === template.id),
+          );
+          return {
+            templates: [...merged, ...existing],
+            weeklyProgram: program,
+            selectedWeekday: targetWeekday,
+          };
+        });
+        get().loadWorkoutForWeekday(targetWeekday);
+      },
       toggleExpanded: (exerciseId) =>
         set((state) => ({
           expandedExerciseId: state.expandedExerciseId === exerciseId ? null : exerciseId,

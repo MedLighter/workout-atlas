@@ -70,5 +70,64 @@ export function updateProgramDay(
   return {
     ...program,
     days,
+    name: deriveProgramName(days),
   };
+}
+
+export type SchedulePresetId = 'fullbody3' | 'fullbody2' | 'all-rest';
+
+export const SCHEDULE_PRESETS: Array<{
+  id: SchedulePresetId;
+  label: string;
+  subtitle: string;
+}> = [
+  { id: 'fullbody3', label: '3× Full Body', subtitle: 'Пн · Ср · Пт' },
+  { id: 'fullbody2', label: '2× Full Body', subtitle: 'Пн · Чт' },
+  { id: 'all-rest', label: 'Без плана', subtitle: 'Все дни — отдых' },
+];
+
+export function createSchedulePreset(preset: SchedulePresetId): WeeklyProgram {
+  if (preset === 'fullbody3') {
+    return { ...defaultWeeklyProgram };
+  }
+
+  if (preset === 'all-rest') {
+    const days = defaultWeeklyProgram.days.map((day) => ({
+      weekday: day.weekday,
+      type: 'rest' as const,
+      title: 'Отдых',
+    }));
+    return {
+      id: 'program-rest',
+      name: deriveProgramName(days),
+      days,
+    };
+  }
+
+  const days = defaultWeeklyProgram.days.map((day) => {
+    if (day.weekday === 0 || day.weekday === 3) {
+      return day;
+    }
+    return { weekday: day.weekday, type: 'rest' as const, title: 'Отдых' };
+  });
+
+  return {
+    id: 'program-full-body-2x',
+    name: deriveProgramName(days),
+    days,
+  };
+}
+
+export function countWorkoutDays(program: WeeklyProgram): number {
+  return program.days.filter((day) => day.type === 'workout').length;
+}
+
+export function formatWorkoutDaysSummary(program: WeeklyProgram): string {
+  const workoutDays = program.days.filter((day) => day.type === 'workout');
+  if (workoutDays.length === 0) {
+    return 'Тренировок нет — только отдых';
+  }
+
+  const labels = workoutDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(' · ');
+  return `${workoutDays.length} тренировки · ${labels}`;
 }

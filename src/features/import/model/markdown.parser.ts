@@ -1,4 +1,4 @@
-import type { ImportExercise, ImportSet, WorkoutImportDocument } from './import.types';
+import type { ImportExercise, ImportSet, WorkoutTemplateDocument } from './import.types';
 
 const SET_LINE_REGEX =
   /^-\s*(warmup|working|drop|amrap|failure|backoff):\s*([\d.]+)\s*(kg|lb)?\s*x\s*(\d+)(?:\s*@RPE\s*([\d.]+))?/i;
@@ -40,10 +40,10 @@ function createMedia(url: string, role: 'exercise_demo' | 'muscle_map' = 'exerci
   };
 }
 
-export function parseWorkoutMarkdown(markdown: string): WorkoutImportDocument {
+export function parseWorkoutMarkdown(markdown: string): WorkoutTemplateDocument {
   const lines = markdown.split('\n').map((line) => line.trim());
-  const doc: WorkoutImportDocument = {
-    protocolVersion: '1.0',
+  const doc: WorkoutTemplateDocument = {
+    protocolVersion: '1.1',
     documentType: 'workout_template',
     title: 'Imported Workout',
     unit: 'kg',
@@ -66,8 +66,10 @@ export function parseWorkoutMarkdown(markdown: string): WorkoutImportDocument {
       const key = fieldMatch[1].toLowerCase();
       const value = fieldMatch[2].trim();
 
-      if (key === 'type') doc.documentType = value as WorkoutImportDocument['documentType'];
-      if (key === 'unit') doc.unit = value as WorkoutImportDocument['unit'];
+      if (key === 'type' && (value === 'workout_template' || value === 'workout_session')) {
+        doc.documentType = value;
+      }
+      if (key === 'unit') doc.unit = value as WorkoutTemplateDocument['unit'];
       if (key === 'goal') doc.goal = value;
       if (key === 'difficulty') doc.difficulty = value;
       if (key === 'duration') doc.estimatedDurationMin = Number(value.replace(/\D/g, '')) || undefined;

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Dimensions, FlatList, Platform, View, type ViewToken } from 'react-native';
+import { Dimensions, FlatList, Platform, ScrollView, View, type ViewToken } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { AppScreen } from '../../../shared/ui/AppScreen';
@@ -9,6 +9,7 @@ import { TrackingModePicker } from '../../../shared/ui/TrackingModePicker';
 import { useSettingsStore } from '../../settings/model/settings.store';
 import { useWorkoutStore } from '../../workout/model/workout.store';
 import type { TrackingMode } from '../../workout/model/workout.types';
+import { WeekScheduleEditor } from '../../workout/components/WeekScheduleEditor';
 
 const { width } = Dimensions.get('window');
 
@@ -44,7 +45,7 @@ const slides: Slide[] = [
     id: '4',
     kind: 'schedule',
     title: 'План на неделю',
-    subtitle: 'Full Body 3x: Пн / Ср / Пт — тренировки, остальные дни отдых.',
+    subtitle: 'Выбери пресет или настрой дни вручную — всегда можно изменить в настройках.',
   },
   {
     id: '5',
@@ -152,6 +153,10 @@ export function OnboardingScreen() {
   const trackingMode = useSettingsStore((s) => s.trackingMode);
   const setTrackingMode = useSettingsStore((s) => s.setTrackingMode);
   const loadWorkoutForWeekday = useWorkoutStore((s) => s.loadWorkoutForWeekday);
+  const weeklyProgram = useWorkoutStore((s) => s.weeklyProgram);
+  const templates = useWorkoutStore((s) => s.templates);
+  const updateScheduleDay = useWorkoutStore((s) => s.updateScheduleDay);
+  const setWeeklyProgram = useWorkoutStore((s) => s.setWeeklyProgram);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems[0]?.index != null) {
@@ -198,22 +203,42 @@ export function OnboardingScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
           renderItem={({ item }) => (
-            <View style={{ width }} className="px-8 pt-12 justify-center">
-              <View className="items-center mb-6" pointerEvents="none">
-                <SlideIllustration kind={item.kind} />
-              </View>
-              <AppText variant="title" className="mb-3 text-center">
-                {item.title}
-              </AppText>
-              <AppText variant="body" muted className="text-center mb-4">
-                {item.subtitle}
-              </AppText>
-              {item.kind === 'tracking' ? (
-                <TrackingModePicker
-                  value={trackingMode}
-                  onChange={(mode: TrackingMode) => setTrackingMode(mode)}
-                />
-              ) : null}
+            <View style={{ width }} className="px-6 pt-8 flex-1">
+              {item.kind === 'schedule' ? (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+                  <AppText variant="title" className="mb-3 text-center">
+                    {item.title}
+                  </AppText>
+                  <AppText variant="body" muted className="text-center mb-5">
+                    {item.subtitle}
+                  </AppText>
+                  <WeekScheduleEditor
+                    compact
+                    program={weeklyProgram}
+                    templates={templates}
+                    onUpdateDay={updateScheduleDay}
+                    onApplyPreset={setWeeklyProgram}
+                  />
+                </ScrollView>
+              ) : (
+                <View className="flex-1 justify-center px-2">
+                  <View className="items-center mb-6" pointerEvents="none">
+                    <SlideIllustration kind={item.kind} />
+                  </View>
+                  <AppText variant="title" className="mb-3 text-center">
+                    {item.title}
+                  </AppText>
+                  <AppText variant="body" muted className="text-center mb-4">
+                    {item.subtitle}
+                  </AppText>
+                  {item.kind === 'tracking' ? (
+                    <TrackingModePicker
+                      value={trackingMode}
+                      onChange={(mode: TrackingMode) => setTrackingMode(mode)}
+                    />
+                  ) : null}
+                </View>
+              )}
             </View>
           )}
         />

@@ -33,7 +33,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable reserveTabBar>
       <AppText variant="title" className="mb-1">
         Настройки
       </AppText>
@@ -81,7 +81,7 @@ export function SettingsScreen() {
           План недели
         </AppText>
         <AppText variant="caption" muted className="mb-3">
-          Сейчас: {weeklyProgram.name}. Назначь тренировки на каждый день.
+          Сейчас: {weeklyProgram.name}. Пресеты или ручная настройка по дням.
         </AppText>
         <AppButton label="Изменить план недели" variant="secondary" onPress={handleEditPlan} />
       </View>

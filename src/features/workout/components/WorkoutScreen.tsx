@@ -47,7 +47,7 @@ export function WorkoutScreen() {
   const finishWorkout = useWorkoutStore((s) => s.finishWorkout);
   const templates = useWorkoutStore((s) => s.templates);
   const updateScheduleDay = useWorkoutStore((s) => s.updateScheduleDay);
-  const setProgramName = useWorkoutStore((s) => s.setProgramName);
+  const setWeeklyProgram = useWorkoutStore((s) => s.setWeeklyProgram);
   const resetWeeklyProgram = useWorkoutStore((s) => s.resetWeeklyProgram);
   const planEditorOpen = useWorkoutStore((s) => s.planEditorOpen);
   const openPlanEditor = useWorkoutStore((s) => s.openPlanEditor);
@@ -227,7 +227,7 @@ export function WorkoutScreen() {
         templates={templates}
         onClose={closePlanEditor}
         onUpdateDay={updateScheduleDay}
-        onSetProgramName={setProgramName}
+        onApplyPreset={setWeeklyProgram}
         onReset={resetWeeklyProgram}
       />
     </AppScreen>

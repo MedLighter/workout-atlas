@@ -1,9 +1,9 @@
 import type { WorkoutUnit } from '../../workout/model/workout.types';
 
-export const AI_IMPORT_PROTOCOL_VERSION = '1.0';
+export const AI_IMPORT_PROTOCOL_VERSION = '1.1';
 
 export function buildAiImportPrompt(unit: WorkoutUnit = 'kg'): string {
-  return `Сгенерируй тренировку в формате Workout Import Protocol v${AI_IMPORT_PROTOCOL_VERSION}.
+  return `Сгенерируй программу тренировок в формате Workout Import Protocol v${AI_IMPORT_PROTOCOL_VERSION}.
 
 Контекст:
 - Приложение: Workout Atlas (трекер силовых тренировок).
@@ -13,9 +13,31 @@ export function buildAiImportPrompt(unit: WorkoutUnit = 'kg'): string {
 - Верни только валидный JSON без markdown-обёртки и без комментариев.
 - Не добавляй текст до или после JSON.
 - protocolVersion: "${AI_IMPORT_PROTOCOL_VERSION}".
-- documentType: "workout_template".
+- documentType: "program" (предпочтительно для недельного плана) или "workout_template" (одна тренировка).
 - language: "ru".
 - unit: "${unit}".
+
+Если documentType = "program" (рекомендуется):
+- title — название программы, напр. "Full Body 3x".
+- progression — план прогрессии (см. ниже).
+- schedule — расписание по дням недели.
+- workouts — массив тренировок программы.
+
+Расписание (schedule):
+- weekday: 0=Пн, 1=Вт, 2=Ср, 3=Чт, 4=Пт, 5=Сб, 6=Вс.
+- type: "workout" | "rest".
+- workoutTitle — обязателен для workout, должен совпадать с workouts[].title.
+
+Прогрессия (progression):
+- enabled: true | false
+- mode: "linear" | "rpe"
+- weightIncrementKg / weightIncrementLb — шаг повышения веса
+- targetRpe — целевой RPE для режима rpe (1-10)
+- cadence — как часто повышать нагрузку:
+  - "every_session" — каждую тренировку с этим упражнением
+  - "weekly" — не чаще раза в 7 дней
+  - "biweekly" — не чаще раза в 14 дней
+  - "every_n_sessions" — каждые N завершённых тренировок (укажи cadenceEverySessions)
 
 Поля тренировки (обязательные и рекомендуемые):
 - title — название тренировки.
@@ -58,7 +80,7 @@ export function buildAiImportPrompt(unit: WorkoutUnit = 'kg'): string {
 - Не добавляй опасные или экстремальные рекомендации.
 - Для тяжёлых базовых упражнений добавляй safetyNotes.
 
-Если пользователь не указал детали — предложи сбалансированную тренировку на 4-6 упражнений.`;
+Если пользователь не указал детали — предложи программу на неделю (2-4 тренировки) с расписанием и прогрессией.`;
 }
 
 export function buildAiImportProgressionGuide(unit: WorkoutUnit = 'kg'): string {
@@ -68,16 +90,23 @@ export function buildAiImportProgressionGuide(unit: WorkoutUnit = 'kg'): string 
 1. Первый раз пользователь выполняет веса из шаблона.
 2. После завершения тренировки веса сохраняются в историю.
 3. На следующей тренировке с тем же упражнением (то же name) Atlas предлагает новую цель.
+4. Блок progression в program автоматически настраивает режим и интервал прогрессии.
 
-Что важно заложить в JSON/Markdown:
+Что важно заложить в JSON:
 - rpe на каждом working-подходе (1-10).
-- Одинаковые name для одного и того же упражнения в программе (например, "Жим лежа" везде одинаково).
-- notes с логикой прогрессии: стартовая база, шаг (+2.5 ${unit} / +5 ${unit}), условие повышения.
-- 2-3 рабочих подхода с одинаковым weight/reps — удобнее для линейной прогрессии.
+- Одинаковые name для одного и того же упражнения в программе.
+- notes с логикой прогрессии: стартовая база, шаг, условие повышения.
+- progression.cadence — интервал между повышениями (every_session / weekly / biweekly / every_n_sessions).
 
-Режимы прогрессии в приложении:
-- Линейная: все рабочие подходы закрыты → +шаг к весу.
-- По RPE: RPE ниже цели → +шаг; выше → снижение или удержание.
+Режимы прогрессии:
+- linear: все рабочие подходы закрыты → +шаг к весу.
+- rpe: RPE ниже цели → +шаг; выше → снижение или удержание.
+
+Интервалы (cadence):
+- every_session — повышать при каждой тренировке с упражнением.
+- weekly — не чаще 1 раза в 7 дней.
+- biweekly — не чаще 1 раза в 14 дней.
+- every_n_sessions + cadenceEverySessions: 2 — каждые 2 завершённые тренировки.
 
 Рекомендуемая формулировка в notes:
 "База: 80 ${unit} × 6 @RPE 8. Если все рабочие подходы выполнены — следующий раз 82.5 ${unit} × 6."`;
@@ -88,7 +117,7 @@ export function buildAiImportJsonExample(unit: WorkoutUnit = 'kg'): string {
     {
       protocolVersion: AI_IMPORT_PROTOCOL_VERSION,
       documentType: 'workout_template',
-      title: 'Full Body A',
+      title: 'Full Body A (single)',
       language: 'ru',
       unit,
       goal: 'Сила и гипертрофия',
@@ -151,6 +180,81 @@ export function buildAiImportJsonExample(unit: WorkoutUnit = 'kg'): string {
   );
 }
 
+function buildBenchExercise(unit: WorkoutUnit) {
+  return {
+    name: 'Жим лежа',
+    muscleGroups: ['Грудь', 'Трицепс', 'Передние дельты'],
+    equipment: ['Штанга', 'Скамья'],
+    restSec: 180,
+    notes: `База: 80 ${unit} × 6 @RPE 8. Если все рабочие закрыты — +2.5 ${unit}.`,
+    sets: [
+      { type: 'warmup', weight: 40, reps: 10, rpe: 5 },
+      { type: 'working', weight: 80, reps: 6, rpe: 8 },
+      { type: 'working', weight: 80, reps: 6, rpe: 8.5 },
+    ],
+  };
+}
+
+function buildSquatExercise(unit: WorkoutUnit) {
+  return {
+    name: 'Приседания со штангой',
+    muscleGroups: ['Квадрицепс', 'Ягодицы'],
+    equipment: ['Штанга', 'Стойки'],
+    restSec: 180,
+    notes: `База: 100 ${unit} × 5 @RPE 8. Прогрессия +2.5 ${unit} при RPE ≤ 7.`,
+    sets: [
+      { type: 'warmup', weight: 60, reps: 8, rpe: 5 },
+      { type: 'working', weight: 100, reps: 5, rpe: 8 },
+    ],
+  };
+}
+
+export function buildAiImportProgramJsonExample(unit: WorkoutUnit = 'kg'): string {
+  return JSON.stringify(
+    {
+      protocolVersion: AI_IMPORT_PROTOCOL_VERSION,
+      documentType: 'program',
+      title: 'Full Body 3x',
+      language: 'ru',
+      unit,
+      goal: 'Сила и гипертрофия',
+      progression: {
+        enabled: true,
+        mode: 'linear',
+        weightIncrementKg: unit === 'kg' ? 2.5 : undefined,
+        weightIncrementLb: unit === 'lb' ? 5 : undefined,
+        targetRpe: 8,
+        cadence: 'weekly',
+      },
+      schedule: [
+        { weekday: 0, type: 'workout', workoutTitle: 'Full Body A' },
+        { weekday: 1, type: 'rest' },
+        { weekday: 2, type: 'workout', workoutTitle: 'Full Body B' },
+        { weekday: 3, type: 'rest' },
+        { weekday: 4, type: 'workout', workoutTitle: 'Full Body A' },
+        { weekday: 5, type: 'rest' },
+        { weekday: 6, type: 'rest' },
+      ],
+      workouts: [
+        {
+          title: 'Full Body A',
+          goal: 'База',
+          estimatedDurationMin: 75,
+          exercises: [buildBenchExercise(unit), buildSquatExercise(unit)],
+        },
+        {
+          title: 'Full Body B',
+          goal: 'База',
+          estimatedDurationMin: 70,
+          exercises: [buildSquatExercise(unit), buildBenchExercise(unit)],
+        },
+      ],
+    },
+    null,
+    2,
+  );
+}
+
 export function buildAiImportMarkdownExample(unit: WorkoutUnit = 'kg'): string {
   return `# Full Body A
 Type: workout_template
@@ -181,10 +285,10 @@ Sets:
 - working: 100 ${unit} x 5 @RPE 8`;
 }
 
-export const AI_IMPORT_FIELD_REFERENCE = `Справочник полей Workout Import Protocol v1.0
+export const AI_IMPORT_FIELD_REFERENCE = `Справочник полей Workout Import Protocol v1.1
 
-Корневой объект:
-- protocolVersion (обяз.) — только "1.0"
+Корневой объект (workout_template / workout_session):
+- protocolVersion (обяз.) — "1.0" | "1.1"
 - documentType (обяз.) — workout_template | workout_session | program
 - title (обяз.) — строка, не пустая
 - unit (обяз.) — kg | lb
@@ -193,6 +297,29 @@ export const AI_IMPORT_FIELD_REFERENCE = `Справочник полей Workou
 - difficulty — уровень сложности
 - estimatedDurationMin — число, минуты
 - exercises (обяз.) — массив, минимум 1 упражнение
+
+Корневой объект (program):
+- title — название программы
+- progression — план прогрессии (см. ниже)
+- schedule — расписание по дням недели
+- workouts — массив тренировок
+
+schedule[]:
+- weekday (обяз.) — 0=Пн … 6=Вс
+- type (обяз.) — workout | rest
+- workoutTitle — для workout, ссылка на workouts[].title
+
+progression:
+- enabled — true | false
+- mode — linear | rpe
+- weightIncrementKg / weightIncrementLb — шаг веса
+- targetRpe — 1-10
+- cadence — every_session | weekly | biweekly | every_n_sessions
+- cadenceEverySessions — число, если cadence = every_n_sessions
+
+workouts[]:
+- title (обяз.)
+- exercises (обяз.) — как в workout_template
 
 Упражнение:
 - name (обяз.) — название
@@ -278,9 +405,15 @@ export const AI_IMPORT_SECTIONS: AiImportSection[] = [
   },
   {
     id: 'json-example',
-    title: 'Пример JSON',
-    description: 'Полный образец валидного документа',
+    title: 'Пример JSON (одна тренировка)',
+    description: 'Шаблон workout_template',
     getContent: buildAiImportJsonExample,
+  },
+  {
+    id: 'program-example',
+    title: 'Пример JSON (программа на неделю)',
+    description: 'program + schedule + progression',
+    getContent: buildAiImportProgramJsonExample,
   },
   {
     id: 'markdown-example',

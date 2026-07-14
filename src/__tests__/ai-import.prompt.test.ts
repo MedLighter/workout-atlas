@@ -3,6 +3,7 @@ import {
   buildAiImportCopyPackage,
   buildAiImportJsonExample,
   buildAiImportMarkdownExample,
+  buildAiImportProgramJsonExample,
   buildAiImportProgressionGuide,
   buildAiImportPrompt,
 } from '../features/import/model/ai-import.prompt';
@@ -28,8 +29,18 @@ describe('ai import prompt kit', () => {
 
   it('includes progression guidance in prompt and guide', () => {
     expect(buildAiImportPrompt('kg')).toContain('Прогрессия');
+    expect(buildAiImportPrompt('kg')).toContain('schedule');
+    expect(buildAiImportPrompt('kg')).toContain('cadence');
     expect(buildAiImportProgressionGuide('kg')).toContain('rpe');
     expect(buildAiImportJsonExample('kg')).toContain('База:');
+  });
+
+  it('provides valid weekly program example', () => {
+    const example = JSON.parse(buildAiImportProgramJsonExample('kg'));
+    const result = validateWorkoutImport(example);
+    expect(result.success).toBe(true);
+    expect(example.documentType).toBe('program');
+    expect(example.schedule.length).toBeGreaterThan(0);
   });
 
   it('provides valid json example', () => {
@@ -47,7 +58,7 @@ describe('ai import prompt kit', () => {
   });
 
   it('exposes copyable sections', () => {
-    expect(AI_IMPORT_SECTIONS.length).toBeGreaterThanOrEqual(6);
+    expect(AI_IMPORT_SECTIONS.length).toBeGreaterThanOrEqual(7);
     expect(AI_IMPORT_SECTIONS[0].getContent('kg').length).toBeGreaterThan(100);
   });
 });

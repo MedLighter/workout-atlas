@@ -5,9 +5,11 @@ import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import type { TrackingMode, WorkoutUnit } from '../../workout/model/workout.types';
 import {
   DEFAULT_PROGRESSION_SETTINGS,
+  type ProgressionCadence,
   type ProgressionMode,
   type ProgressionSettings,
 } from '../../workout/model/progression.types';
+
 import { AI_IMPORT_PROMPT, buildAiImportPrompt } from '../../import/model/ai-import.prompt';
 
 export { AI_IMPORT_PROMPT };
@@ -26,6 +28,9 @@ interface SettingsState extends ProgressionSettings {
   setWeightIncrementKg: (value: number) => void;
   setWeightIncrementLb: (value: number) => void;
   setTargetRpe: (value: number) => void;
+  setProgressionCadence: (cadence: ProgressionCadence) => void;
+  setCadenceEverySessions: (value: number) => void;
+  applyProgressionPlan: (plan: Partial<ProgressionSettings>) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
 }
@@ -57,6 +62,9 @@ export const useSettingsStore = create<SettingsState>()(
       setWeightIncrementKg: (value) => set({ weightIncrementKg: value }),
       setWeightIncrementLb: (value) => set({ weightIncrementLb: value }),
       setTargetRpe: (value) => set({ targetRpe: value }),
+      setProgressionCadence: (cadence) => set({ cadence }),
+      setCadenceEverySessions: (value) => set({ cadenceEverySessions: value }),
+      applyProgressionPlan: (plan) => set((state) => ({ ...state, ...plan })),
       completeOnboarding: () => set({ onboardingComplete: true }),
       resetOnboarding: () => set({ onboardingComplete: false }),
     }),

@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
 import { useSettingsStore } from '../model/settings.store';
-import type { ProgressionMode } from '../../workout/model/progression.types';
+import type { ProgressionCadence, ProgressionMode } from '../../workout/model/progression.types';
+import { PROGRESSION_CADENCE_LABELS } from '../../workout/model/progression.types';
 
 const MODE_OPTIONS: {
   id: ProgressionMode;
@@ -32,11 +33,22 @@ export function ProgressionSection() {
   const weightIncrementKg = useSettingsStore((s) => s.weightIncrementKg);
   const weightIncrementLb = useSettingsStore((s) => s.weightIncrementLb);
   const targetRpe = useSettingsStore((s) => s.targetRpe);
+  const cadence = useSettingsStore((s) => s.cadence);
+  const cadenceEverySessions = useSettingsStore((s) => s.cadenceEverySessions);
   const setProgressionEnabled = useSettingsStore((s) => s.setProgressionEnabled);
   const setProgressionMode = useSettingsStore((s) => s.setProgressionMode);
   const setWeightIncrementKg = useSettingsStore((s) => s.setWeightIncrementKg);
   const setWeightIncrementLb = useSettingsStore((s) => s.setWeightIncrementLb);
   const setTargetRpe = useSettingsStore((s) => s.setTargetRpe);
+  const setProgressionCadence = useSettingsStore((s) => s.setProgressionCadence);
+  const setCadenceEverySessions = useSettingsStore((s) => s.setCadenceEverySessions);
+
+  const cadenceOptions: ProgressionCadence[] = [
+    'every_session',
+    'weekly',
+    'biweekly',
+    'every_n_sessions',
+  ];
 
   const increment = unit === 'kg' ? weightIncrementKg : weightIncrementLb;
   const incrementOptions = unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10];
@@ -134,6 +146,38 @@ export function ProgressionSection() {
                   />
                 ))}
               </View>
+            </View>
+
+            <View>
+              <AppText variant="caption" muted className="mb-2">
+                Интервал прогрессии
+              </AppText>
+              <View className="flex-row flex-wrap gap-2">
+                {cadenceOptions.map((option) => (
+                  <AppButton
+                    key={option}
+                    compact
+                    label={PROGRESSION_CADENCE_LABELS[option]}
+                    variant={cadence === option ? 'primary' : 'secondary'}
+                    onPress={() => setProgressionCadence(option)}
+                    className="flex-1 min-w-[120px]"
+                  />
+                ))}
+              </View>
+              {cadence === 'every_n_sessions' ? (
+                <View className="flex-row gap-2 mt-2">
+                  {[2, 3, 4].map((value) => (
+                    <AppButton
+                      key={value}
+                      compact
+                      label={`Каждые ${value}`}
+                      variant={cadenceEverySessions === value ? 'primary' : 'secondary'}
+                      onPress={() => setCadenceEverySessions(value)}
+                      className="flex-1"
+                    />
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             {mode === 'rpe' ? (

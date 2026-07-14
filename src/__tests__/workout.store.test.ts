@@ -15,6 +15,8 @@ jest.mock('../features/settings/model/settings.store', () => ({
       weightIncrementKg: 2.5,
       weightIncrementLb: 5,
       targetRpe: 8,
+      cadence: 'every_session',
+      cadenceEverySessions: 2,
     }),
   },
 }));

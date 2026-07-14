@@ -1,5 +1,6 @@
 import type { Exercise, WorkoutSession, WorkoutSet } from '../model/workout.types';
 import type {
+  ProgressionCadence,
   ProgressionSettings,
   ProgressionSuggestion,
   ProgressionTrend,
@@ -24,6 +25,51 @@ function getBestWorkingSet(sets: WorkoutSet[]): WorkoutSet | null {
   const working = getWorkingSets(sets).filter((set) => set.weight && set.reps);
   if (working.length === 0) return null;
   return working.sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))[0];
+}
+
+function daysSinceDate(date: string): number {
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return Number.POSITIVE_INFINITY;
+  return (Date.now() - parsed.getTime()) / 86_400_000;
+}
+
+function sessionsSincePerformance(
+  exerciseName: string,
+  performanceDate: string,
+  completedSessions: WorkoutSession[],
+): number {
+  const target = normalizeExerciseName(exerciseName);
+  const index = completedSessions.findIndex((session) => {
+    if (session.date !== performanceDate) return false;
+    return session.exercises.some(
+      (exercise) => normalizeExerciseName(exercise.name) === target,
+    );
+  });
+  return index < 0 ? 0 : index;
+}
+
+export function isProgressionCadenceMet(
+  exerciseName: string,
+  performanceDate: string,
+  completedSessions: WorkoutSession[],
+  cadence: ProgressionCadence,
+  cadenceEverySessions: number,
+): boolean {
+  switch (cadence) {
+    case 'every_session':
+      return true;
+    case 'weekly':
+      return daysSinceDate(performanceDate) >= 7;
+    case 'biweekly':
+      return daysSinceDate(performanceDate) >= 14;
+    case 'every_n_sessions':
+      return (
+        sessionsSincePerformance(exerciseName, performanceDate, completedSessions) >=
+        cadenceEverySessions
+      );
+    default:
+      return true;
+  }
 }
 
 function averageRpe(sets: WorkoutSet[]): number | null {
@@ -83,6 +129,27 @@ export function calculateProgressionSuggestion(
 
   const last = findLastExercisePerformance(exercise.name, completedSessions);
   if (!last) return null;
+
+  if (
+    !isProgressionCadenceMet(
+      exercise.name,
+      last.date,
+      completedSessions,
+      settings.cadence,
+      settings.cadenceEverySessions,
+    )
+  ) {
+    const best = getBestWorkingSet(getWorkingSets(last.exercise.sets).filter((set) => set.completed));
+    if (!best?.weight || !best.reps) return null;
+    return buildSuggestion(
+      best.weight,
+      best.reps,
+      'hold',
+      'Ещё рано повышать — ждём следующий интервал прогрессии',
+      last.date,
+      { weight: best.weight, reps: best.reps },
+    );
+  }
 
   const workingSets = getWorkingSets(last.exercise.sets);
   const completedWorking = workingSets.filter((set) => set.completed);
