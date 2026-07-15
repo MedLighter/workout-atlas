@@ -1,5 +1,5 @@
-import { WorkoutScreen } from '../../features/workout/components/WorkoutScreen';
+import { TodayScreen } from '../../features/today/components/TodayScreen';
 
 export default function TodayRoute() {
-  return <WorkoutScreen />;
+  return <TodayScreen />;
 }

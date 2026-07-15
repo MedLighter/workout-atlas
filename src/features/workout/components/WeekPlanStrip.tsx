@@ -3,33 +3,22 @@ import { Ionicons } from '@expo/vector-icons';
 import type { WeeklyProgram } from '../model/workout.types';
 import { WEEKDAY_LABELS, getMondayFirstWeekday } from '../model/workout.schedule';
 import { AppText } from '../../../shared/ui/AppText';
-import { AppButton } from '../../../shared/ui/AppButton';
 
 interface WeekPlanStripProps {
   program: WeeklyProgram;
   selectedWeekday: number;
   onSelectDay: (weekday: number) => void;
-  onEdit?: () => void;
 }
 
-export function WeekPlanStrip({ program, selectedWeekday, onSelectDay, onEdit }: WeekPlanStripProps) {
+export function WeekPlanStrip({ program, selectedWeekday, onSelectDay }: WeekPlanStripProps) {
   const todayWeekday = getMondayFirstWeekday();
 
   return (
-    <View className="mb-3">
-      <View className="flex-row items-center justify-between mb-2 px-5">
-        <AppText variant="caption" muted>
-          План недели · {program.name}
-        </AppText>
-        <AppText variant="caption" className="text-emerald-400">
-          {WEEKDAY_LABELS[todayWeekday]} — сегодня
-        </AppText>
-      </View>
-
+    <View className="pb-2">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 6 }}
       >
         {program.days.map((day) => {
           const selected = selectedWeekday === day.weekday;
@@ -40,7 +29,7 @@ export function WeekPlanStrip({ program, selectedWeekday, onSelectDay, onEdit }:
             <Pressable
               key={day.weekday}
               onPress={() => onSelectDay(day.weekday)}
-              className={`w-[72px] rounded-2xl border px-2 py-3 items-center active:opacity-90 ${
+              className={`min-w-[52px] rounded-xl border px-2 py-2 items-center active:opacity-90 ${
                 selected
                   ? 'bg-emerald-950/50 border-emerald-500/40'
                   : isToday
@@ -50,45 +39,29 @@ export function WeekPlanStrip({ program, selectedWeekday, onSelectDay, onEdit }:
             >
               <AppText
                 variant="caption"
-                className={selected ? 'text-emerald-400' : isToday ? 'text-zinc-200' : ''}
+                className={`text-[11px] ${selected ? 'text-emerald-400' : isToday ? 'text-zinc-200' : ''}`}
                 muted={!selected && !isToday}
               >
-                {WEEKDAY_LABELS[day.weekday]}
+                {WEEKDAY_LABELS[day.weekday].slice(0, 2)}
               </AppText>
 
-              <View className="my-2">
+              <View className="my-1">
                 {isRest ? (
-                  <Ionicons name="moon-outline" size={18} color={selected ? '#34D399' : '#71717A'} />
+                  <Ionicons name="moon-outline" size={14} color={selected ? '#34D399' : '#71717A'} />
                 ) : (
-                  <Ionicons name="barbell-outline" size={18} color={selected ? '#34D399' : '#A1A1AA'} />
+                  <Ionicons name="barbell-outline" size={14} color={selected ? '#34D399' : '#A1A1AA'} />
                 )}
               </View>
 
-              <AppText
-                variant="caption"
-                numberOfLines={2}
-                className={`text-center text-[10px] leading-3 ${
-                  selected ? 'text-emerald-300' : ''
-                }`}
-                muted={!selected}
-              >
-                {isRest ? 'Отдых' : day.title}
-              </AppText>
+              {isToday ? (
+                <View className="w-1 h-1 rounded-full bg-emerald-500" />
+              ) : (
+                <View className="w-1 h-1" />
+              )}
             </Pressable>
           );
         })}
       </ScrollView>
-
-      {onEdit ? (
-        <View className="px-5 mt-3">
-          <AppButton
-            compact
-            variant="secondary"
-            label="Изменить план недели"
-            onPress={onEdit}
-          />
-        </View>
-      ) : null}
     </View>
   );
 }

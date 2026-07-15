@@ -1,4 +1,5 @@
 import type { WorkoutSession } from './workout.types';
+import { mockFullBodyASession } from '../../../shared/mock/mock-data';
 import { mockWorkoutSession } from './workout.mock';
 
 function cloneSession(
@@ -23,7 +24,7 @@ function cloneSession(
 }
 
 export const templateFullBodyA = cloneSession(
-  mockWorkoutSession,
+  mockFullBodyASession,
   'template-full-body-a',
   'Full Body A',
 );

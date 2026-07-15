@@ -1,16 +1,1 @@
-export const colors = {
-  slate950: '#020617',
-  zinc950: '#09090B',
-  zinc900: '#18181B',
-  zinc800: '#27272A',
-  zinc700: '#3F3F46',
-  zinc500: '#71717A',
-  zinc400: '#A1A1AA',
-  zinc300: '#D4D4D8',
-  zinc50: '#FAFAFA',
-  emerald500: '#10B981',
-  emerald400: '#34D399',
-  emerald950: '#064E3B',
-  amber500: '#F59E0B',
-  red500: '#EF4444',
-} as const;
+export { colors } from './tokens';

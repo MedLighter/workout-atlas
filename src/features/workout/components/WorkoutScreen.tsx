@@ -1,24 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppScreen } from '../../../shared/ui/AppScreen';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
+import { LoadingPulse } from '../../../shared/ui/animations/LoadingPulse';
+import { FadeSlideIn } from '../../../shared/ui/animations/FadeSlideIn';
+import { useScrollToFocusedInput } from '../../../shared/hooks/useScrollToFocusedInput';
+import { useTabBarHeight } from '../../../shared/theme/layout';
 import { useWorkoutStore } from '../model/workout.store';
 import { selectProgressionSuggestion, selectWorkoutProgress } from '../model/workout.selectors';
-import { ProgressStrip } from './ProgressStrip';
-import { WorkoutProgressionStrip } from './WorkoutProgressionStrip';
 import { ExerciseRow } from './ExerciseRow';
 import { AnalyticsModal } from './AnalyticsModal';
 import { WeekPlanStrip } from './WeekPlanStrip';
 import { WeekPlanEditorModal } from './WeekPlanEditorModal';
+import { WorkoutHeader } from './WorkoutHeader';
+import { WorkoutBottomBar } from './WorkoutBottomBar';
 import { useSettingsStore } from '../../settings/model/settings.store';
 import { WEEKDAY_NAMES, getMondayFirstWeekday } from '../model/workout.schedule';
+import type { Exercise } from '../model/workout.types';
+import { getExerciseStatus } from '../utils/workoutStatus';
 
-const FINISH_BAR_HEIGHT = 88;
+const BOTTOM_BAR_HEIGHT = 108;
 
 export function WorkoutScreen() {
   const { bottom } = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
+  const listRef = useRef<FlatList<Exercise>>(null);
   const unit = useSettingsStore((s) => s.unit);
   const trackingMode = useSettingsStore((s) => s.trackingMode);
   const progressionEnabled = useSettingsStore((s) => s.enabled);
@@ -109,62 +117,100 @@ export function WorkoutScreen() {
     ).length ?? 0;
   const atlasExercise =
     currentSession?.exercises.find((exercise) => exercise.id === atlasExerciseId) ?? null;
+  const currentExercise =
+    currentSession?.exercises.find((exercise) => exercise.id === expandedExerciseId) ??
+    currentSession?.exercises.find(
+      (exercise) =>
+        getExerciseStatus(exercise) !== 'done' && getExerciseStatus(exercise) !== 'skipped',
+    ) ??
+    null;
+
+  const { keyboardHeight, trackScroll, scrollToFocusedInput } = useScrollToFocusedInput(
+    BOTTOM_BAR_HEIGHT + tabBarHeight,
+  );
+
+  useEffect(() => {
+    if (!expandedExerciseId || !currentSession) return;
+
+    const index = currentSession.exercises.findIndex((item) => item.id === expandedExerciseId);
+    if (index < 0) return;
+
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.25,
+      });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [expandedExerciseId, currentSession?.id]);
 
   if (!hydrated) {
     return (
       <AppScreen>
-        <View className="flex-1 items-center justify-center">
-          <AppText variant="body" muted>
-            Загрузка...
-          </AppText>
-        </View>
+        <LoadingPulse label="Подготавливаем тренировку..." />
       </AppScreen>
     );
   }
 
+  const headerSubtitle = [
+    WEEKDAY_NAMES[selectedWeekday],
+    selectedWeekday === todayWeekday ? 'сегодня' : null,
+    trackingMode === 'simple' ? 'быстрый режим' : 'детальный режим',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <AppScreen padded={false}>
-      <View className="px-5 pt-2 pb-2">
-        <AppText variant="caption" muted className="mb-1">
-          Workout Atlas
-        </AppText>
-        <AppText variant="title" className="mb-1">
-          {isRestDay ? 'День отдыха' : currentSession?.title ?? selectedDay?.title ?? 'Тренировка'}
-        </AppText>
-        <AppText variant="caption" muted>
-          {WEEKDAY_NAMES[selectedWeekday]}
-          {selectedWeekday === todayWeekday ? ' · сегодня' : ''}
-          {trackingMode === 'simple' ? ' · быстрый режим' : ' · детальный режим'}
-        </AppText>
-      </View>
+      <WorkoutHeader
+        title={
+          isRestDay
+            ? 'День отдыха'
+            : currentSession?.title ?? selectedDay?.title ?? 'Тренировка'
+        }
+        subtitle={headerSubtitle}
+        completed={progress.completed}
+        total={progress.total}
+        percent={progress.percent}
+        progressionCount={progressionEnabled ? progressionCount : 0}
+        onEditPlan={openPlanEditor}
+      />
 
       <WeekPlanStrip
         program={weeklyProgram}
         selectedWeekday={selectedWeekday}
         onSelectDay={handleSelectDay}
-        onEdit={openPlanEditor}
       />
 
       {currentSession ? (
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+          style={{ minHeight: 0 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? tabBarHeight + 8 : 0}
         >
-          <View className="px-5 pb-3">
-            <WorkoutProgressionStrip count={progressionEnabled ? progressionCount : 0} />
-            <ProgressStrip {...progress} />
-          </View>
-
           <FlatList
+            ref={listRef}
+            style={{ flex: 1 }}
             data={currentSession.exercises}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             automaticallyAdjustKeyboardInsets
+            onScroll={(event) => trackScroll(event.nativeEvent.contentOffset.y)}
+            scrollEventThrottle={16}
+            onScrollToIndexFailed={(info) => {
+              listRef.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
+                animated: true,
+              });
+            }}
             contentContainerStyle={{
               paddingHorizontal: 20,
-              paddingBottom: progress.percent === 100 ? FINISH_BAR_HEIGHT + bottom + 16 : bottom + 16,
+              paddingTop: 8,
+              paddingBottom: 12 + (keyboardHeight > 0 ? 12 : 0),
             }}
             renderItem={({ item }) => (
               <ExerciseRow
@@ -178,6 +224,7 @@ export function WorkoutScreen() {
                   currentSession.unit,
                 )}
                 expanded={expandedExerciseId === item.id}
+                isActive={expandedExerciseId === item.id}
                 onToggle={() => toggleExpanded(item.id)}
                 onOpenAtlas={() => openAtlas(item.id)}
                 onToggleSimple={() => toggleExerciseSimple(item.id)}
@@ -185,35 +232,38 @@ export function WorkoutScreen() {
                 onCopyLast={(setId) => copyLastSet(item.id, setId)}
                 onAddSet={() => addSet(item.id)}
                 onSkip={() => skipExercise(item.id)}
+                onInputFocus={(layout) => scrollToFocusedInput(listRef, layout)}
               />
             )}
           />
 
-          {progress.percent === 100 ? (
-            <View
-              className="absolute left-0 right-0 px-5 pt-3 bg-zinc-950/95 border-t border-zinc-800"
-              style={{ bottom: 0, paddingBottom: bottom + 12 }}
-            >
-              <AppButton label="Завершить тренировку" onPress={finishWorkout} />
-            </View>
-          ) : null}
+          <WorkoutBottomBar
+            completed={progress.completed}
+            total={progress.total}
+            percent={progress.percent}
+            currentExerciseName={
+              trackingMode === 'detailed' ? currentExercise?.name : undefined
+            }
+            bottomInset={bottom}
+            onFinish={finishWorkout}
+          />
         </KeyboardAvoidingView>
       ) : isRestDay ? (
-        <View className="flex-1 px-5 items-center justify-center">
+        <FadeSlideIn className="flex-1 px-5 items-center justify-center">
           <AppText variant="section" className="mb-2 text-center">
             Сегодня восстановление
           </AppText>
           <AppText variant="body" muted className="text-center mb-5">
-            Отдых — часть программы. Выбери другой день в плане или начни внеплановую тренировку.
+            Отдых — часть программы. Начни внеплановую тренировку или выбери другой день.
           </AppText>
           <AppButton
             label="Внеплановая тренировка"
             variant="secondary"
             onPress={startUnplannedWorkout}
           />
-        </View>
+        </FadeSlideIn>
       ) : (
-        <View className="flex-1 px-5 items-center justify-center gap-3">
+        <FadeSlideIn className="flex-1 px-5 items-center justify-center gap-3">
           <AppText variant="section">Нет активной тренировки</AppText>
           <AppText variant="body" muted className="text-center">
             Выбери день с тренировкой в плане или импортируй из AI
@@ -222,7 +272,7 @@ export function WorkoutScreen() {
             label="Загрузить тренировку"
             onPress={() => loadWorkoutForWeekday(selectedWeekday)}
           />
-        </View>
+        </FadeSlideIn>
       )}
 
       <AnalyticsModal

@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import Storage from '../../../shared/storage/kv-store';
 import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import type { TrackingMode, WorkoutUnit } from '../../workout/model/workout.types';
+import type { TrainingGoal } from '../../onboarding/model/onboarding.store';
 import {
   DEFAULT_PROGRESSION_SETTINGS,
   type ProgressionCadence,
@@ -20,6 +21,13 @@ interface SettingsState extends ProgressionSettings {
   trackingMode: TrackingMode;
   onboardingComplete: boolean;
   aiImportPrompt: string;
+  goal: TrainingGoal | null;
+  experience: string | null;
+  skipWorkoutPrep: boolean;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+  reduceMotion: boolean;
+  textScale: 'normal' | 'large';
   setUnit: (unit: WorkoutUnit) => void;
   setRestTimerSec: (seconds: number) => void;
   setTrackingMode: (mode: TrackingMode) => void;
@@ -33,6 +41,13 @@ interface SettingsState extends ProgressionSettings {
   applyProgressionPlan: (plan: Partial<ProgressionSettings>) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+  setGoal: (goal: TrainingGoal) => void;
+  setExperience: (value: string) => void;
+  setSkipWorkoutPrep: (value: boolean) => void;
+  setSoundEnabled: (value: boolean) => void;
+  setVibrationEnabled: (value: boolean) => void;
+  setReduceMotion: (value: boolean) => void;
+  setTextScale: (value: 'normal' | 'large') => void;
 }
 
 const kvStorage = createJSONStorage(() => ({
@@ -45,10 +60,17 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       unit: 'kg',
-      restTimerSec: 90,
+      restTimerSec: 120,
       trackingMode: 'detailed',
       onboardingComplete: false,
       aiImportPrompt: AI_IMPORT_PROMPT,
+      goal: null,
+      experience: null,
+      skipWorkoutPrep: false,
+      soundEnabled: true,
+      vibrationEnabled: true,
+      reduceMotion: false,
+      textScale: 'normal',
       ...DEFAULT_PROGRESSION_SETTINGS,
       setUnit: (unit) =>
         set({
@@ -67,6 +89,13 @@ export const useSettingsStore = create<SettingsState>()(
       applyProgressionPlan: (plan) => set((state) => ({ ...state, ...plan })),
       completeOnboarding: () => set({ onboardingComplete: true }),
       resetOnboarding: () => set({ onboardingComplete: false }),
+      setGoal: (goal) => set({ goal }),
+      setExperience: (value) => set({ experience: value }),
+      setSkipWorkoutPrep: (value) => set({ skipWorkoutPrep: value }),
+      setSoundEnabled: (value) => set({ soundEnabled: value }),
+      setVibrationEnabled: (value) => set({ vibrationEnabled: value }),
+      setReduceMotion: (value) => set({ reduceMotion: value }),
+      setTextScale: (value) => set({ textScale: value }),
     }),
     {
       name: STORAGE_KEYS.settings,

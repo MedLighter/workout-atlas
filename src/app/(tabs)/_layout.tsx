@@ -6,6 +6,7 @@ import {
   TAB_BAR_PADDING_BOTTOM,
   TAB_BAR_PADDING_TOP,
 } from '../../shared/theme/layout';
+import { colors } from '../../shared/theme/tokens';
 
 export default function TabsLayout() {
   const { bottom } = useSafeAreaInsets();
@@ -16,57 +17,64 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
-          backgroundColor: '#09090B',
-          borderTopColor: '#27272A',
+          backgroundColor: '#070B0D',
+          borderTopColor: colors.borderSubtle,
+          borderTopWidth: 1,
           height: tabBarHeight,
           paddingBottom: TAB_BAR_PADDING_BOTTOM + bottom,
-          paddingTop: TAB_BAR_PADDING_TOP,
+          paddingTop: TAB_BAR_PADDING_BOTTOM,
         },
-        tabBarActiveTintColor: '#10B981',
-        tabBarInactiveTintColor: '#71717A',
+        tabBarActiveTintColor: colors.accentPrimary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 2,
         },
+        tabBarItemStyle: { paddingTop: 2 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="today-outline" size={size} color={color} />
+          title: 'Сегодня',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'today' : 'today-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="import"
+        name="plan"
         options={{
-          title: 'Import',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="download-outline" size={size} color={color} />
+          title: 'План',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="library"
+        name="progress"
         options={{
-          title: 'Library',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="library-outline" size={size} color={color} />
+          title: 'Прогресс',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="profile"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+          title: 'Профиль',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="import" options={{ href: null }} />
+      <Tabs.Screen name="library" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

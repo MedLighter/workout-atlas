@@ -33,6 +33,15 @@ export function getWorkoutProgress(session: WorkoutSession): {
   return { completed, total, percent };
 }
 
+export function findNextActiveExerciseId(session: WorkoutSession): string | null {
+  const exercise = session.exercises.find((item) => {
+    const status = getExerciseStatus(item);
+    return status !== 'done' && status !== 'skipped';
+  });
+
+  return exercise?.id ?? null;
+}
+
 export function formatPreviousSet(
   weight: number | undefined,
   reps: number | undefined,

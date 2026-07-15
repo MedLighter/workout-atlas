@@ -58,4 +58,18 @@ describe('useWorkoutStore', () => {
     expect(state.selectedWeekday).toBe(1);
     expect(state.currentSession).toBeNull();
   });
+
+  it('removes a template and converts schedule days that used it to rest', () => {
+    useWorkoutStore.getState().removeTemplate('template-full-body-a');
+
+    const state = useWorkoutStore.getState();
+    expect(state.templates.some((template) => template.id === 'template-full-body-a')).toBe(false);
+    expect(
+      state.weeklyProgram.days.filter(
+        (day) => day.type === 'workout' && day.templateId === 'template-full-body-a',
+      ),
+    ).toHaveLength(0);
+    expect(state.weeklyProgram.days.find((day) => day.weekday === 0)?.type).toBe('rest');
+    expect(state.weeklyProgram.days.find((day) => day.weekday === 4)?.type).toBe('rest');
+  });
 });

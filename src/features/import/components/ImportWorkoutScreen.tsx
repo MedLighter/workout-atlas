@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { ScrollView, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { AppScreen } from '../../../shared/ui/AppScreen';
 import { AppText } from '../../../shared/ui/AppText';
@@ -22,7 +23,9 @@ import { buildAiImportProgramJsonExample } from '../model/ai-import.prompt';
 import { useWorkoutStore } from '../../workout/model/workout.store';
 import { useSettingsStore } from '../../settings/model/settings.store';
 import { AiImportPromptSection } from '../../settings/components/AiImportPromptSection';
-import { IMPORT_SCROLL_END_PADDING } from '../../../shared/theme/layout';
+import { IMPORT_ACTION_BAR_HEIGHT, IMPORT_SCROLL_END_PADDING } from '../../../shared/theme/layout';
+import { FadeSlideIn } from '../../../shared/ui/animations/FadeSlideIn';
+import { useScrollToFocusedInput } from '../../../shared/hooks/useScrollToFocusedInput';
 
 const SAMPLE_TEMPLATE_JSON = `{
   "protocolVersion": "1.1",
@@ -45,6 +48,7 @@ const SAMPLE_TEMPLATE_JSON = `{
 
 export function ImportWorkoutScreen() {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
   const unit = useSettingsStore((s) => s.unit);
   const setUnit = useSettingsStore((s) => s.setUnit);
   const applyProgressionPlan = useSettingsStore((s) => s.applyProgressionPlan);
@@ -58,6 +62,9 @@ export function ImportWorkoutScreen() {
   const canImport = validated?.success && !!validated.document;
   const isProgram =
     canImport && validated?.document && isProgramImportDocument(validated.document);
+  const { scrollToFocusedInput } = useScrollToFocusedInput(
+    canImport ? IMPORT_ACTION_BAR_HEIGHT : 0,
+  );
 
   const handleValidate = () => {
     setValidated(parseImportInput(input));
@@ -78,7 +85,7 @@ export function ImportWorkoutScreen() {
       importWeeklyProgram(templates, weeklyProgram);
       setUnit(validated.document.unit);
       applyProgressionPlan(mapImportProgressionToSettings(validated.document.progression));
-      router.push('/(tabs)');
+      router.replace('/(tabs)/plan');
       return;
     }
 
@@ -86,7 +93,7 @@ export function ImportWorkoutScreen() {
     addTemplate(session);
     setCurrentSession(session);
     setUnit(validated.document.unit);
-    router.push('/(tabs)');
+    router.replace('/(tabs)/plan');
   };
 
   const importLabel = isProgram ? 'Импортировать программу' : 'Импортировать';
@@ -96,8 +103,10 @@ export function ImportWorkoutScreen() {
       <View className="flex-1" style={{ minHeight: 0 }}>
         <AppScreen
           scrollable
+          scrollRef={scrollRef}
           extraBottomSpacing={canImport ? IMPORT_SCROLL_END_PADDING : 0}
         >
+          <FadeSlideIn>
           <AppText variant="title" className="mb-1">
             Импорт
           </AppText>
@@ -116,6 +125,7 @@ export function ImportWorkoutScreen() {
             }}
             onClear={handleClear}
             format={format}
+            onInputFocus={(layout) => scrollToFocusedInput(scrollRef, layout)}
           />
 
           <View className="flex-row gap-2 mb-2">
@@ -147,19 +157,27 @@ export function ImportWorkoutScreen() {
 
           {validated ? (
             <>
-              <ValidationBanner errors={validated.errors} warnings={validated.warnings} />
+              <ValidationBanner
+                errors={validated.errors}
+                warnings={validated.warnings}
+                success={validated.success}
+              />
               {validated.success && validated.document ? (
                 <WorkoutPreview document={validated.document} />
               ) : null}
             </>
           ) : null}
+          </FadeSlideIn>
         </AppScreen>
       </View>
 
       {canImport ? (
-        <View className="shrink-0 px-5 pt-3 pb-4 bg-zinc-950 border-t border-zinc-800">
+        <Animated.View
+          entering={FadeInUp.duration(280)}
+          className="shrink-0 px-5 pt-3 pb-4 bg-zinc-950 border-t border-zinc-800"
+        >
           <AppButton label={importLabel} onPress={handleImport} />
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );

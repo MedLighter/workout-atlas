@@ -8,6 +8,7 @@ import { ProgressionCard } from './ProgressionCard';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
 import { MediaAssetView } from '../../media/components/MediaAssetView';
+import { colors } from '../../../shared/theme/tokens';
 
 interface AnalyticsModalProps {
   visible: boolean;
@@ -29,32 +30,34 @@ export function AnalyticsModal({
   if (!exercise) return null;
 
   const oneRm = selectEstimatedOneRm(exercise);
+  const oneRmDisplay = oneRm?.replace(' (оценка)', '') ?? null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-black/70 justify-end" onPress={onClose}>
-        <Pressable className="bg-zinc-950 border-t border-zinc-800 rounded-t-3xl max-h-[88%]" onPress={(e) => e.stopPropagation()}>
+      <Pressable className="flex-1 bg-black/80 justify-end" onPress={onClose}>
+        <Pressable
+          className="border-t border-border-strong rounded-t-xl max-h-[92%]"
+          style={{ backgroundColor: colors.bgSecondary }}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View className="items-center pt-3 pb-2">
-            <View className="w-10 h-1 bg-zinc-700 rounded-full" />
+            <View className="w-10 h-1 rounded-full" style={{ backgroundColor: colors.borderStrong }} />
           </View>
 
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottom + 32 }}>
-            <View className="flex-row items-center gap-2 mb-1">
-              <View className="w-8 h-8 rounded-full bg-emerald-500/15 items-center justify-center">
-                <Ionicons name="map" size={16} color="#34D399" />
-              </View>
-              <View className="flex-1">
-                <AppText variant="section">{exercise.name}</AppText>
-                <AppText variant="caption" className="text-emerald-400">
-                  Atlas Layer · карта нагрузки
-                </AppText>
-              </View>
+            <View className="flex-row items-center justify-between mb-4">
+              <AppText variant="bodyL">Atlas</AppText>
+              <Pressable onPress={onClose} className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: colors.surfacePrimary }}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
             </View>
-            <AppText variant="body" muted className="mb-4">
-              Демо, мышцы, история и оценка 1ПМ — всё по этому упражнению в одном месте.
+
+            <AppText variant="h2" className="mb-1">{exercise.name}</AppText>
+            <AppText variant="caption" muted className="mb-4">
+              {[...(exercise.muscleGroups ?? []), ...(exercise.equipment ?? [])].join(' · ')}
             </AppText>
 
-            <View className="flex-row gap-3 mb-4">
+            <View className="flex-row gap-3 mb-3">
               <View className="flex-1">
                 <MediaAssetView assets={exercise.media} role="exercise_demo" height={120} />
               </View>
@@ -63,34 +66,20 @@ export function AnalyticsModal({
               </View>
             </View>
 
-            {exercise.muscleGroups?.length ? (
-              <View className="mb-3">
-                <AppText variant="caption" muted className="mb-1">
-                  Мышцы
-                </AppText>
-                <AppText variant="body">{exercise.muscleGroups.join(' · ')}</AppText>
+            <View className="flex-row gap-2 mb-4">
+              <View className="flex-1 p-3 rounded-md border border-border-subtle" style={{ backgroundColor: colors.surfacePrimary }}>
+                <AppText variant="caption" muted>1ПМ</AppText>
+                <AppText variant="h3" tabular>{oneRmDisplay ? `${oneRmDisplay} ${unit}` : '—'}</AppText>
               </View>
-            ) : null}
-
-            {exercise.equipment?.length ? (
-              <View className="mb-3">
-                <AppText variant="caption" muted className="mb-1">
-                  Оборудование
-                </AppText>
-                <AppText variant="body">{exercise.equipment.join(' · ')}</AppText>
-              </View>
-            ) : null}
-
-            {oneRm ? (
-              <View className="mb-3 p-3 bg-emerald-950/40 border border-emerald-500/20 rounded-xl">
-                <AppText variant="caption" muted className="mb-1">
-                  Estimated 1ПМ
-                </AppText>
-                <AppText variant="row" className="text-emerald-400">
-                  {oneRm} {unit}
+              <View className="flex-1 p-3 rounded-md border border-border-subtle" style={{ backgroundColor: colors.surfacePrimary }}>
+                <AppText variant="caption" muted>Лучший подход</AppText>
+                <AppText variant="h3" tabular>
+                  {exercise.history?.[0]?.sets?.[0]
+                    ? `${exercise.history[0].sets[0].weight ?? '—'} ${unit} × ${exercise.history[0].sets[0].reps ?? '—'}`
+                    : '—'}
                 </AppText>
               </View>
-            ) : null}
+            </View>
 
             {progressionSuggestion ? (
               <View className="mb-3">
@@ -133,7 +122,7 @@ export function AnalyticsModal({
               </AppText>
               {exercise.history?.length ? (
                 exercise.history.map((entry) => (
-                  <View key={entry.id} className="mb-2 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
+                  <View key={entry.id} className="mb-2 p-3 border border-border-subtle rounded-md" style={{ backgroundColor: colors.surfacePrimary }}>
                     <AppText variant="caption" className="mb-1">
                       {entry.date}
                     </AppText>

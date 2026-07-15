@@ -28,21 +28,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
-  backgroundColor: '#09090B',
-  primaryColor: '#10B981',
+  backgroundColor: '#05090B',
+  primaryColor: '#18D49B',
   platforms: ['ios', 'android', 'web'],
-  splash: {
-    image: './assets/splash-icon.png',
-    resizeMode: 'contain',
-    backgroundColor: '#09090B',
-  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.workoutatlas.app',
   },
   android: {
     versionCode: 1,
-    backgroundColor: '#09090B',
+    backgroundColor: '#05090B',
     softwareKeyboardLayoutMode: 'resize',
     adaptiveIcon: {
       backgroundColor: '#0B1018',
@@ -60,18 +55,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: 'Workout Atlas',
     shortName: 'Atlas',
     lang: 'ru',
-    themeColor: '#09090B',
-    backgroundColor: '#09090B',
+    themeColor: '#05090B',
+    backgroundColor: '#05090B',
     display: 'standalone',
     orientation: 'portrait',
     description: 'Твой атлас нагрузки — быстрый трекинг тренировок и глубокая аналитика',
     startUrl: '.',
     scope: resolveBaseUrl() || '/',
-    splash: {
-      image: './assets/splash-icon.png',
-      resizeMode: 'contain',
-      backgroundColor: '#09090B',
-    },
   },
   scheme: 'workout-atlas',
   plugins: [
@@ -86,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#09090B',
+        backgroundColor: '#05090B',
         image: './assets/splash-icon.png',
         imageWidth: 200,
       },

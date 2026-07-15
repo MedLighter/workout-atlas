@@ -1,30 +1,31 @@
 import { View } from 'react-native';
 import type { ValidationMessage } from '../model/import.types';
-import { AppText } from '../../../shared/ui/AppText';
+import { FeedbackBanner } from '../../../shared/ui/animations/FeedbackBanner';
 
 interface ValidationBannerProps {
   errors: ValidationMessage[];
   warnings: ValidationMessage[];
+  success?: boolean;
 }
 
-export function ValidationBanner({ errors, warnings }: ValidationBannerProps) {
+export function ValidationBanner({ errors, warnings, success }: ValidationBannerProps) {
+  if (success && errors.length === 0) {
+    return (
+      <View className="mb-4">
+        <FeedbackBanner tone="success" message="JSON проверен — можно импортировать" />
+      </View>
+    );
+  }
+
   if (errors.length === 0 && warnings.length === 0) return null;
 
   return (
     <View className="gap-2 mb-4">
       {errors.map((item, index) => (
-        <View key={`error-${index}`} className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-          <AppText variant="body" className="text-red-500">
-            {item.message}
-          </AppText>
-        </View>
+        <FeedbackBanner key={`error-${index}`} tone="error" message={item.message} />
       ))}
       {warnings.map((item, index) => (
-        <View key={`warn-${index}`} className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-          <AppText variant="body" className="text-amber-500">
-            {item.message}
-          </AppText>
-        </View>
+        <FeedbackBanner key={`warn-${index}`} tone="warning" message={item.message} />
       ))}
     </View>
   );

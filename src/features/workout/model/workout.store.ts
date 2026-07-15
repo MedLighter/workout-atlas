@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from '../../../shared/storage/storage-keys';
 import { mockWorkoutSession } from './workout.mock';
 import {
   defaultWeeklyProgram,
+  deriveProgramName,
   getMondayFirstWeekday,
   type ScheduleDayUpdate,
   updateProgramDay,
@@ -16,9 +17,19 @@ import {
   applyProgressionToSession,
   syncTemplateExerciseFromPerformance,
 } from '../utils/progression';
-import { getExerciseStatus } from '../utils/workoutStatus';
+import { findNextActiveExerciseId, getExerciseStatus } from '../utils/workoutStatus';
+import {
+  initialFocusFlowState,
+  type FocusFlowState,
+  type WorkoutPhase,
+} from './focus-flow.types';
+import {
+  findFirstActiveExerciseIndex,
+  findFirstIncompleteSetIndex,
+  getActiveExercise,
+} from '../utils/focus-flow.logic';
 
-interface WorkoutState {
+interface WorkoutState extends FocusFlowState {
   currentSession: WorkoutSession | null;
   templates: WorkoutSession[];
   completedSessions: WorkoutSession[];
@@ -32,6 +43,7 @@ interface WorkoutState {
   initSession: () => void;
   setCurrentSession: (session: WorkoutSession) => void;
   addTemplate: (session: WorkoutSession) => void;
+  removeTemplate: (templateId: string) => void;
   importWeeklyProgram: (templates: WorkoutSession[], program: WeeklyProgram) => void;
   selectWeekday: (weekday: number) => void;
   loadWorkoutForWeekday: (weekday: number) => void;
@@ -52,6 +64,27 @@ interface WorkoutState {
   toggleExerciseSimple: (exerciseId: string) => void;
   skipExercise: (exerciseId: string) => void;
   finishWorkout: () => void;
+  prepareWorkout: () => void;
+  cancelWorkoutPrep: () => void;
+  startWorkout: (skipPrep?: boolean) => void;
+  completeSet: () => void;
+  skipRest: () => void;
+  extendRest: (seconds: number) => void;
+  selectSetIndex: (index: number) => void;
+  selectExerciseIndex: (index: number) => void;
+  adjustWeight: (delta: number) => void;
+  adjustReps: (delta: number) => void;
+  setActiveWeight: (value: number | undefined) => void;
+  setActiveReps: (value: number | undefined) => void;
+  pauseWorkout: () => void;
+  resumeWorkout: () => void;
+  goToNextExercise: () => void;
+  finishWorkoutEarly: () => void;
+  discardWorkout: () => void;
+  dismissSummary: () => void;
+  setWorkoutFeedback: (feedback: FocusFlowState['workoutFeedback']) => void;
+  setHadPain: (value: boolean) => void;
+  resetFocusFlow: () => void;
 }
 
 const kvStorage = createJSONStorage(() => ({
@@ -111,6 +144,7 @@ function createSessionFromTemplate(
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
+      ...initialFocusFlowState,
       currentSession: null,
       templates: defaultTemplates,
       completedSessions: [],
@@ -141,32 +175,36 @@ export const useWorkoutStore = create<WorkoutState>()(
           templates.find((item) => item.title === day.title);
 
         if (!template) {
+          const session = syncSession({ ...mockWorkoutSession, id: createId('session') });
           set({
             selectedWeekday: weekday,
-            currentSession: syncSession({ ...mockWorkoutSession, id: createId('session') }),
+            currentSession: session,
+            expandedExerciseId: findNextActiveExerciseId(session),
           });
           return;
         }
 
+        const session = withProgression(
+          createSessionFromTemplate(template),
+          get().completedSessions,
+        );
         set({
           selectedWeekday: weekday,
-          currentSession: withProgression(
-            createSessionFromTemplate(template),
-            get().completedSessions,
-          ),
-          expandedExerciseId: null,
+          currentSession: session,
+          expandedExerciseId: findNextActiveExerciseId(session),
         });
       },
       startUnplannedWorkout: () => {
         const { templates, completedSessions } = get();
         const template = templates[0] ?? mockWorkoutSession;
 
+        const session = withProgression(
+          createSessionFromTemplate(template, 'Внеплановая тренировка'),
+          completedSessions,
+        );
         set({
-          currentSession: withProgression(
-            createSessionFromTemplate(template, 'Внеплановая тренировка'),
-            completedSessions,
-          ),
-          expandedExerciseId: null,
+          currentSession: session,
+          expandedExerciseId: findNextActiveExerciseId(session),
         });
       },
       updateScheduleDay: (weekday, update) => {
@@ -199,6 +237,26 @@ export const useWorkoutStore = create<WorkoutState>()(
         set((state) => ({
           templates: [syncSession(session), ...state.templates.filter((t) => t.id !== session.id)],
         })),
+      removeTemplate: (templateId) => {
+        set((state) => {
+          const templates = state.templates.filter((template) => template.id !== templateId);
+          const days = state.weeklyProgram.days.map((day) =>
+            day.type === 'workout' && day.templateId === templateId
+              ? { weekday: day.weekday, type: 'rest' as const, title: 'Отдых' }
+              : day,
+          );
+          const weeklyProgram = {
+            ...state.weeklyProgram,
+            days,
+            name: deriveProgramName(days),
+          };
+          const currentSession =
+            state.currentSession?.id === templateId ? null : state.currentSession;
+
+          return { templates, weeklyProgram, currentSession, expandedExerciseId: null };
+        });
+        get().loadWorkoutForWeekday(get().selectedWeekday);
+      },
       importWeeklyProgram: (templates, program) => {
         const today = getMondayFirstWeekday();
         const todayPlan = program.days.find((day) => day.weekday === today);
@@ -229,6 +287,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       updateSet: (exerciseId, setId, patch) =>
         set((state) => {
           if (!state.currentSession) return state;
+          const previous = state.currentSession.exercises.find((item) => item.id === exerciseId);
           const session = syncSession({
             ...state.currentSession,
             exercises: state.currentSession.exercises.map((exercise) => {
@@ -241,7 +300,20 @@ export const useWorkoutStore = create<WorkoutState>()(
               });
             }),
           });
-          return { ...state, currentSession: session };
+          const updated = session.exercises.find((item) => item.id === exerciseId);
+          const becameDone =
+            previous &&
+            updated &&
+            getExerciseStatus(previous) !== 'done' &&
+            getExerciseStatus(updated) === 'done';
+
+          return {
+            ...state,
+            currentSession: session,
+            expandedExerciseId: becameDone
+              ? findNextActiveExerciseId(session)
+              : state.expandedExerciseId,
+          };
         }),
       copyLastSet: (exerciseId, setId) =>
         set((state) => {
@@ -330,7 +402,18 @@ export const useWorkoutStore = create<WorkoutState>()(
               });
             }),
           });
-          return { ...state, currentSession: session };
+          const becameDone = session.exercises.some(
+            (exercise) =>
+              exercise.id === exerciseId && getExerciseStatus(exercise) === 'done',
+          );
+
+          return {
+            ...state,
+            currentSession: session,
+            expandedExerciseId: becameDone
+              ? findNextActiveExerciseId(session)
+              : exerciseId,
+          };
         }),
       skipExercise: (exerciseId) =>
         set((state) => {
@@ -343,8 +426,181 @@ export const useWorkoutStore = create<WorkoutState>()(
                 : exercise,
             ),
           });
-          return { ...state, currentSession: session };
+          return {
+            ...state,
+            currentSession: session,
+            expandedExerciseId: findNextActiveExerciseId(session),
+          };
         }),
+      resetFocusFlow: () => set({ ...initialFocusFlowState }),
+      prepareWorkout: () => set({ workoutPhase: 'prep' }),
+      cancelWorkoutPrep: () => set({ workoutPhase: 'idle' }),
+      startWorkout: (skipPrep) => {
+        const { currentSession } = get();
+        if (!currentSession) return;
+        const exerciseIndex = findFirstActiveExerciseIndex(currentSession);
+        const exercise = currentSession.exercises[exerciseIndex];
+        const setIndex = exercise ? findFirstIncompleteSetIndex(exercise) : 0;
+        set({
+          workoutPhase: skipPrep ? 'active' : 'active',
+          activeExerciseIndex: exerciseIndex,
+          activeSetIndex: setIndex,
+          workoutStartedAt: new Date().toISOString(),
+          restEndsAt: null,
+          pausedAt: null,
+          elapsedBeforePauseMs: 0,
+        });
+      },
+      completeSet: () => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        if (!exercise) return;
+        const currentSet = exercise.sets[state.activeSetIndex];
+        if (!currentSet) return;
+
+        get().updateSet(exercise.id, currentSet.id, {
+          weight: currentSet.weight ?? currentSet.previousWeight,
+          reps: currentSet.reps ?? currentSet.previousReps,
+          completed: true,
+        });
+
+        const updated = get().currentSession;
+        if (!updated) return;
+        const updatedExercise = updated.exercises[state.activeExerciseIndex];
+        const restSec = updatedExercise?.restSec ?? useSettingsStore.getState().restTimerSec;
+        const isExerciseDone = getExerciseStatus(updatedExercise) === 'done';
+        const hasMoreSets = state.activeSetIndex < updatedExercise.sets.length - 1 && !isExerciseDone;
+
+        if (isExerciseDone) {
+          set({ workoutPhase: 'exercise_complete', restEndsAt: null });
+          return;
+        }
+
+        if (hasMoreSets) {
+          set({
+            workoutPhase: 'rest',
+            restEndsAt: Date.now() + restSec * 1000,
+          });
+        }
+      },
+      skipRest: () => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        if (!exercise) return;
+
+        const nextSetIndex = state.activeSetIndex + 1;
+        if (nextSetIndex < exercise.sets.length) {
+          set({
+            workoutPhase: 'active',
+            activeSetIndex: nextSetIndex,
+            restEndsAt: null,
+          });
+        } else {
+          set({ workoutPhase: 'exercise_complete', restEndsAt: null });
+        }
+      },
+      extendRest: (seconds) =>
+        set((state) => ({
+          restEndsAt: state.restEndsAt ? state.restEndsAt + seconds * 1000 : null,
+        })),
+      selectSetIndex: (index) => set({ activeSetIndex: index, workoutPhase: 'active', restEndsAt: null }),
+      selectExerciseIndex: (index) => {
+        const { currentSession } = get();
+        if (!currentSession) return;
+        const exercise = currentSession.exercises[index];
+        if (!exercise) return;
+        set({
+          activeExerciseIndex: index,
+          activeSetIndex: findFirstIncompleteSetIndex(exercise),
+          workoutPhase: 'active',
+          restEndsAt: null,
+        });
+      },
+      adjustWeight: (delta) => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        const set = exercise?.sets[state.activeSetIndex];
+        if (!exercise || !set) return;
+        const current = set.weight ?? set.previousWeight ?? 0;
+        get().updateSet(exercise.id, set.id, { weight: Math.max(0, current + delta) });
+      },
+      adjustReps: (delta) => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        const set = exercise?.sets[state.activeSetIndex];
+        if (!exercise || !set) return;
+        const current = set.reps ?? set.previousReps ?? 0;
+        get().updateSet(exercise.id, set.id, { reps: Math.max(0, current + delta) });
+      },
+      setActiveWeight: (value) => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        const set = exercise?.sets[state.activeSetIndex];
+        if (!exercise || !set) return;
+        get().updateSet(exercise.id, set.id, { weight: value });
+      },
+      setActiveReps: (value) => {
+        const state = get();
+        if (!state.currentSession) return;
+        const exercise = getActiveExercise(state.currentSession, state.activeExerciseIndex);
+        const set = exercise?.sets[state.activeSetIndex];
+        if (!exercise || !set) return;
+        get().updateSet(exercise.id, set.id, { reps: value });
+      },
+      pauseWorkout: () =>
+        set((state) => ({
+          workoutPhase: 'paused',
+          pausedAt: new Date().toISOString(),
+        })),
+      resumeWorkout: () =>
+        set((state) => {
+          if (!state.pausedAt || !state.workoutStartedAt) {
+            return { workoutPhase: 'active' as WorkoutPhase, pausedAt: null };
+          }
+          const pauseDuration = Date.now() - new Date(state.pausedAt).getTime();
+          return {
+            workoutPhase: 'active',
+            pausedAt: null,
+            elapsedBeforePauseMs: state.elapsedBeforePauseMs + pauseDuration,
+          };
+        }),
+      goToNextExercise: () => {
+        const { currentSession, activeExerciseIndex } = get();
+        if (!currentSession) return;
+        const nextIndex = currentSession.exercises.findIndex(
+          (ex, i) =>
+            i > activeExerciseIndex &&
+            getExerciseStatus(ex) !== 'done' &&
+            getExerciseStatus(ex) !== 'skipped',
+        );
+        if (nextIndex < 0) {
+          get().finishWorkout();
+          return;
+        }
+        const exercise = currentSession.exercises[nextIndex];
+        set({
+          activeExerciseIndex: nextIndex,
+          activeSetIndex: findFirstIncompleteSetIndex(exercise),
+          workoutPhase: 'active',
+          restEndsAt: null,
+        });
+      },
+      finishWorkoutEarly: () => get().finishWorkout(),
+      discardWorkout: () =>
+        set({
+          ...initialFocusFlowState,
+          currentSession: null,
+          expandedExerciseId: null,
+          atlasExerciseId: null,
+        }),
+      dismissSummary: () => set({ ...initialFocusFlowState, lastFinishedSessionId: null }),
+      setWorkoutFeedback: (feedback) => set({ workoutFeedback: feedback }),
+      setHadPain: (value) => set({ hadPain: value }),
       finishWorkout: () =>
         set((state) => {
           if (!state.currentSession) return state;
@@ -375,6 +631,9 @@ export const useWorkoutStore = create<WorkoutState>()(
             : state.templates;
 
           return {
+            ...initialFocusFlowState,
+            workoutPhase: 'summary' as WorkoutPhase,
+            lastFinishedSessionId: finished.id,
             currentSession: null,
             completedSessions: [finished, ...state.completedSessions],
             templates,
@@ -392,6 +651,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         completedSessions: state.completedSessions,
         weeklyProgram: state.weeklyProgram,
         selectedWeekday: state.selectedWeekday,
+        workoutPhase: state.workoutPhase,
+        activeExerciseIndex: state.activeExerciseIndex,
+        activeSetIndex: state.activeSetIndex,
+        restEndsAt: state.restEndsAt,
+        workoutStartedAt: state.workoutStartedAt,
+        pausedAt: state.pausedAt,
+        elapsedBeforePauseMs: state.elapsedBeforePauseMs,
       }),
       onRehydrateStorage: () => (_state, error) => {
         if (error) {

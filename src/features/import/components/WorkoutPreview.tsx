@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import { FadeSlideIn } from '../../../shared/ui/animations/FadeSlideIn';
 import type { WorkoutImportDocument } from '../model/import.types';
 import { isProgramImportDocument } from '../model/import.types';
 import { WEEKDAY_LABELS } from '../../workout/model/workout.schedule';
@@ -14,6 +15,7 @@ export function WorkoutPreview({ document }: WorkoutPreviewProps) {
     const progression = document.progression;
 
     return (
+      <FadeSlideIn>
       <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2">
         <AppText variant="section" className="mb-1">
           {document.title}
@@ -60,10 +62,12 @@ export function WorkoutPreview({ document }: WorkoutPreviewProps) {
           ))}
         </View>
       </View>
+      </FadeSlideIn>
     );
   }
 
   return (
+    <FadeSlideIn>
     <View className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2">
       <AppText variant="section" className="mb-1">
         {document.title}
@@ -85,5 +89,6 @@ export function WorkoutPreview({ document }: WorkoutPreviewProps) {
         </View>
       ))}
     </View>
+    </FadeSlideIn>
   );
 }

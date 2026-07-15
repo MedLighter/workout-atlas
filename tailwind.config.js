@@ -6,30 +6,43 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        slate: {
-          950: '#020617',
+        bg: {
+          primary: '#05090B',
+          secondary: '#091013',
         },
-        zinc: {
-          50: '#FAFAFA',
-          300: '#D4D4D8',
-          400: '#A1A1AA',
-          500: '#71717A',
-          700: '#3F3F46',
-          800: '#27272A',
-          900: '#18181B',
-          950: '#09090B',
+        surface: {
+          DEFAULT: '#101619',
+          elevated: '#151D21',
+          soft: '#0C1215',
         },
-        emerald: {
-          400: '#34D399',
-          500: '#10B981',
-          950: '#064E3B',
+        border: {
+          subtle: '#1D282D',
+          strong: '#2A383E',
         },
-        amber: {
-          500: '#F59E0B',
+        content: {
+          primary: '#F5F7F8',
+          secondary: '#B6BEC6',
+          muted: '#747E87',
+          disabled: '#4E565E',
         },
-        red: {
-          500: '#EF4444',
+        accent: {
+          DEFAULT: '#18D49B',
+          bright: '#27E6B0',
+          deep: '#07966F',
+          hover: '#24DEAA',
+          pressed: '#0CB584',
+          surface: 'rgba(24,212,155,0.11)',
+          border: 'rgba(39,230,176,0.32)',
         },
+        warning: '#F4B740',
+        error: '#F05D5E',
+        info: '#5CA8FF',
+      },
+      borderRadius: {
+        sm: '12px',
+        md: '16px',
+        lg: '20px',
+        xl: '28px',
       },
     },
   },

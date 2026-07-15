@@ -114,7 +114,6 @@ export function DataBackupSection() {
         />
         {Platform.OS === 'web' ? (
           <>
-            {/* @ts-expect-error web-only file input */}
             <input
               ref={fileInputRef}
               type="file"
