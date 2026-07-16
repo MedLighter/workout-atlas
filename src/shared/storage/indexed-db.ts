@@ -29,6 +29,8 @@ function createLocalStorageFallback(): KvStore {
   };
 }
 
+const IDB_OPEN_TIMEOUT_MS = 2000;
+
 function openDatabase(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
 
@@ -39,9 +41,20 @@ function openDatabase(): Promise<IDBDatabase> {
     }
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const timeout = setTimeout(() => {
+      dbPromise = null;
+      reject(new Error('IndexedDB open timeout'));
+    }, IDB_OPEN_TIMEOUT_MS);
 
-    request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB'));
-    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => {
+      clearTimeout(timeout);
+      dbPromise = null;
+      reject(request.error ?? new Error('Failed to open IndexedDB'));
+    };
+    request.onsuccess = () => {
+      clearTimeout(timeout);
+      resolve(request.result);
+    };
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {

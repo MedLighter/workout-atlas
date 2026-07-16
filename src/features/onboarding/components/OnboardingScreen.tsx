@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeScreen } from '../../../shared/ui/SafeScreen';
@@ -10,6 +10,7 @@ import { BrandMark } from '../../../shared/ui/animations/BrandMark';
 import { FadeSlideIn } from '../../../shared/ui/animations/FadeSlideIn';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../shared/theme/tokens';
+import { usePersistHydration } from '../../../shared/hooks/usePersistHydration';
 import { useSettingsStore } from '../../settings/model/settings.store';
 import {
   useOnboardingStore,
@@ -32,7 +33,7 @@ const PROGRAM_CHOICES: { id: ProgramChoice; label: string; description: string }
 
 export function OnboardingScreen() {
   const router = useRouter();
-  const [hydrated, setHydrated] = useState(() => useSettingsStore.persist.hasHydrated());
+  const hydrated = usePersistHydration(useSettingsStore.persist);
   const onboardingComplete = useSettingsStore((s) => s.onboardingComplete);
   const step = useOnboardingStore((s) => s.step);
   const goal = useOnboardingStore((s) => s.goal);
@@ -43,15 +44,6 @@ export function OnboardingScreen() {
   const completeOnboarding = useSettingsStore((s) => s.completeOnboarding);
   const setProfileGoal = useSettingsStore((s) => s.setGoal);
   const resetOnboardingFlow = useOnboardingStore((s) => s.reset);
-
-  useEffect(() => {
-    if (useSettingsStore.persist.hasHydrated()) {
-      setHydrated(true);
-      return;
-    }
-    const unsub = useSettingsStore.persist.onFinishHydration(() => setHydrated(true));
-    return unsub;
-  }, []);
 
   useEffect(() => {
     if (hydrated && onboardingComplete) {
@@ -72,8 +64,16 @@ export function OnboardingScreen() {
     router.replace(path as never);
   };
 
-  if (!hydrated || onboardingComplete) {
-    return null;
+  if (onboardingComplete) {
+    return <View style={{ flex: 1, backgroundColor: colors.bgPrimary }} />;
+  }
+
+  if (!hydrated) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bgPrimary, alignItems: 'center', justifyContent: 'center' }}>
+        <BrandMark size={72} />
+      </View>
+    );
   }
 
   const goNext = () => setStep(step + 1);
