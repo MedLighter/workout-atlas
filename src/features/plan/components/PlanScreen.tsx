@@ -130,14 +130,14 @@ export function PlanScreen() {
 
       {templates.length > 0 ? (
         <>
-          <StaggerItem index={4} className="mb-4">
+          <StaggerItem index={4} className="mt-5 mb-4">
             <AppText variant="h3">Шаблоны</AppText>
-            <AppText variant="caption" muted style={{ marginTop: spacing.sm }}>
+            <AppText variant="caption" muted style={{ marginTop: spacing.md }}>
               Нажми на шаблон, чтобы посмотреть упражнения
             </AppText>
           </StaggerItem>
 
-          <View style={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+          <View style={{ gap: spacing.lg, paddingBottom: spacing.sm }}>
             {templates.map((template, templateIndex) => {
               const scheduleDays = weeklyProgram.days.filter(
                 (day) => day.type === 'workout' && day.templateId === template.id,

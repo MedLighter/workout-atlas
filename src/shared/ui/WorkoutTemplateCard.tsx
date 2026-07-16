@@ -124,7 +124,7 @@ export function WorkoutTemplateCard({
 
   if (mode === 'browse') {
     return (
-      <View className="flex-row items-center gap-2" style={cardStyle}>
+      <View className="flex-row items-stretch" style={cardStyle}>
         <PressableScale
           accessibilityRole="button"
           onPress={onPress}
@@ -135,15 +135,23 @@ export function WorkoutTemplateCard({
           {content}
         </PressableScale>
         {onDelete ? (
-          <IconButton
-            size={40}
-            variant="ghost"
-            accessibilityLabel={`Удалить шаблон ${title}`}
-            onPress={onDelete}
-            style={{ marginRight: 8 }}
+          <View
+            style={{
+              width: 48,
+              paddingRight: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-          </IconButton>
+            <IconButton
+              size={40}
+              variant="ghost"
+              accessibilityLabel={`Удалить шаблон ${title}`}
+              onPress={onDelete}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+            </IconButton>
+          </View>
         ) : null}
       </View>
     );

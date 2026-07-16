@@ -1,12 +1,11 @@
-import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  TAB_BAR_CONTENT_HEIGHT,
   TAB_BAR_LABEL_LINE_HEIGHT,
-  TAB_BAR_PADDING_BOTTOM,
   TAB_BAR_PADDING_TOP,
+  getTabBarHeight,
+  getTabBarPaddingBottom,
 } from '../../shared/theme/layout';
 import { colors } from '../../shared/theme/tokens';
 
@@ -14,13 +13,8 @@ const TAB_ICON_SIZE = 22;
 
 export default function TabsLayout() {
   const { bottom } = useSafeAreaInsets();
-  const webTabBarExtra = Platform.OS === 'web' ? 4 : 0;
-  const tabBarHeight =
-    TAB_BAR_PADDING_TOP +
-    TAB_BAR_CONTENT_HEIGHT +
-    TAB_BAR_PADDING_BOTTOM +
-    bottom +
-    webTabBarExtra;
+  const tabBarHeight = getTabBarHeight(bottom);
+  const tabBarPaddingBottom = getTabBarPaddingBottom(bottom);
 
   return (
     <Tabs
@@ -32,7 +26,7 @@ export default function TabsLayout() {
           borderTopColor: colors.borderSubtle,
           borderTopWidth: 1,
           height: tabBarHeight,
-          paddingBottom: TAB_BAR_PADDING_BOTTOM + bottom + webTabBarExtra,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: TAB_BAR_PADDING_TOP,
         },
         tabBarActiveTintColor: colors.accentPrimary,
@@ -42,13 +36,10 @@ export default function TabsLayout() {
           lineHeight: TAB_BAR_LABEL_LINE_HEIGHT,
           fontWeight: '600',
           marginTop: 2,
-          ...(Platform.OS === 'web'
-            ? { paddingBottom: 2, marginBottom: 0 }
-            : { marginBottom: 1 }),
+          marginBottom: 1,
         },
         tabBarItemStyle: {
           paddingTop: 2,
-          paddingBottom: Platform.OS === 'web' ? 2 : 0,
         },
         tabBarIconStyle: {
           marginBottom: 1,

@@ -39,6 +39,8 @@ export function IconButton({
           height: size,
           backgroundColor: bg,
           opacity: disabled ? 0.4 : 1,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         style,
       ]}
