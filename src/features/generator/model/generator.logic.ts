@@ -16,6 +16,15 @@ interface GeneratorAnswers {
   limitations: string[];
 }
 
+const WORKOUT_WEEKDAYS: Record<GeneratorFrequency, number[]> = {
+  2: [0, 3],
+  3: [0, 2, 4],
+  4: [0, 1, 3, 4],
+  5: [0, 1, 2, 3, 4],
+};
+
+const TEMPLATE_SOURCES = [mockFullBodyASession, templateFullBodyB, mockFullBodyASession];
+
 function cloneTemplate(session: WorkoutSession, id: string, title: string): WorkoutSession {
   const today = new Date().toISOString().split('T')[0];
   return {
@@ -37,25 +46,29 @@ export function generateProgramFromAnswers(answers: GeneratorAnswers): {
   templates: WorkoutSession[];
   program: WeeklyProgram;
 } {
-  const templateA = cloneTemplate(mockFullBodyASession, 'template-full-body-a', 'Full Body A');
-  const templateB = cloneTemplate(templateFullBodyB, 'template-full-body-b', 'Full Body B');
-  const templateC = cloneTemplate(mockFullBodyASession, 'template-full-body-c', 'Full Body C');
+  const workoutWeekdays = WORKOUT_WEEKDAYS[answers.frequency];
 
-  const templates = [templateA, templateB, templateC].slice(0, Math.min(answers.frequency, 3));
+  const templates = workoutWeekdays.map((_, index) => {
+    const source = TEMPLATE_SOURCES[index % TEMPLATE_SOURCES.length];
+    const id = `template-generated-${index + 1}`;
+    const title = `Full Body ${index + 1}`;
+    return cloneTemplate(source, id, title);
+  });
 
-  const workoutDays: WeeklyProgram['days'] = [
-    { weekday: 0, type: 'workout', title: 'Full Body A', templateId: 'template-full-body-a' },
-    { weekday: 1, type: 'rest', title: 'Отдых' },
-    { weekday: 2, type: 'workout', title: 'Full Body B', templateId: 'template-full-body-b' },
-    { weekday: 3, type: 'rest', title: 'Отдых' },
-    { weekday: 4, type: 'workout', title: 'Full Body C', templateId: 'template-full-body-c' },
-    { weekday: 5, type: 'rest', title: 'Отдых' },
-    { weekday: 6, type: 'rest', title: 'Отдых' },
-  ];
+  const days: WeeklyProgram['days'] = Array.from({ length: 7 }, (_, weekday) => {
+    const workoutIndex = workoutWeekdays.indexOf(weekday);
+    if (workoutIndex === -1) {
+      return { weekday, type: 'rest', title: 'Отдых' };
+    }
 
-  const activeWorkouts = workoutDays.filter((d) => d.type === 'workout').slice(0, answers.frequency);
-  const restDays = workoutDays.filter((d) => d.type === 'rest');
-  const days = [...activeWorkouts, ...restDays].sort((a, b) => a.weekday - b.weekday);
+    const template = templates[workoutIndex];
+    return {
+      weekday,
+      type: 'workout',
+      title: template.title,
+      templateId: template.id,
+    };
+  });
 
   return {
     templates,

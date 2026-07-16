@@ -10,6 +10,7 @@ import { AppCard } from '../../../shared/ui/AppCard';
 import { ProgressDots } from '../../../shared/ui/animations/ProgressDots';
 import { FadeSlideIn } from '../../../shared/ui/animations/FadeSlideIn';
 import { useOnboardingStore } from '../../onboarding/model/onboarding.store';
+import { useSettingsStore } from '../../settings/model/settings.store';
 import { useWorkoutStore } from '../../workout/model/workout.store';
 import { generateProgramFromAnswers } from '../model/generator.logic';
 
@@ -33,6 +34,7 @@ export function GeneratorWizard() {
   const setLimitationNote = useOnboardingStore((s) => s.setLimitationNote);
 
   const importWeeklyProgram = useWorkoutStore((s) => s.importWeeklyProgram);
+  const completeOnboarding = useSettingsStore((s) => s.completeOnboarding);
 
   const saveProgram = () => {
     const { templates, program } = generateProgramFromAnswers({
@@ -43,7 +45,8 @@ export function GeneratorWizard() {
       limitations,
     });
     importWeeklyProgram(templates, program);
-    router.replace('/(tabs)');
+    completeOnboarding();
+    router.replace('/(tabs)/plan');
   };
 
   return (

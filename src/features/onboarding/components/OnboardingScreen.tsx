@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeScreen } from '../../../shared/ui/SafeScreen';
@@ -43,7 +43,7 @@ const PROGRAM_CHOICES: {
 export function OnboardingScreen() {
   const router = useRouter();
   const hydrated = usePersistHydration(useSettingsStore.persist);
-  const onboardingComplete = useSettingsStore((s) => s.onboardingComplete);
+  const wasCompleteOnMount = useRef(useSettingsStore.getState().onboardingComplete);
   const step = useOnboardingStore((s) => s.step);
   const goal = useOnboardingStore((s) => s.goal);
   const programChoice = useOnboardingStore((s) => s.programChoice);
@@ -55,10 +55,10 @@ export function OnboardingScreen() {
   const resetOnboardingFlow = useOnboardingStore((s) => s.reset);
 
   useEffect(() => {
-    if (hydrated && onboardingComplete) {
+    if (hydrated && wasCompleteOnMount.current) {
       router.replace('/(tabs)');
     }
-  }, [hydrated, onboardingComplete, router]);
+  }, [hydrated, router]);
 
   const skipOnboarding = () => {
     completeOnboarding();
@@ -68,12 +68,12 @@ export function OnboardingScreen() {
 
   const finish = (path: string) => {
     if (goal) setProfileGoal(goal);
-    completeOnboarding();
     resetOnboardingFlow();
     router.replace(path as never);
+    completeOnboarding();
   };
 
-  if (onboardingComplete) {
+  if (wasCompleteOnMount.current) {
     return <View style={{ flex: 1, backgroundColor: colors.bgPrimary }} />;
   }
 

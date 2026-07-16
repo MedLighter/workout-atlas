@@ -52,6 +52,7 @@ export function ImportWorkoutScreen() {
   const unit = useSettingsStore((s) => s.unit);
   const setUnit = useSettingsStore((s) => s.setUnit);
   const applyProgressionPlan = useSettingsStore((s) => s.applyProgressionPlan);
+  const completeOnboarding = useSettingsStore((s) => s.completeOnboarding);
   const [input, setInput] = useState('');
   const [validated, setValidated] = useState<ReturnType<typeof parseImportInput> | null>(null);
   const setCurrentSession = useWorkoutStore((s) => s.setCurrentSession);
@@ -85,6 +86,7 @@ export function ImportWorkoutScreen() {
       importWeeklyProgram(templates, weeklyProgram);
       setUnit(validated.document.unit);
       applyProgressionPlan(mapImportProgressionToSettings(validated.document.progression));
+      completeOnboarding();
       router.replace('/(tabs)/plan');
       return;
     }
@@ -93,6 +95,7 @@ export function ImportWorkoutScreen() {
     addTemplate(session);
     setCurrentSession(session);
     setUnit(validated.document.unit);
+    completeOnboarding();
     router.replace('/(tabs)/plan');
   };
 
