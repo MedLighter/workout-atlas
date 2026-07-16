@@ -5,12 +5,11 @@ import { SafeScreen } from '../../../shared/ui/SafeScreen';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
 import { AppCard } from '../../../shared/ui/AppCard';
-import { IconButton } from '../../../shared/ui/IconButton';
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog';
+import { WorkoutTemplateCard, getTemplateStats } from '../../../shared/ui/WorkoutTemplateCard';
 import { useWorkoutStore } from '../../workout/model/workout.store';
 import { WEEKDAY_LABELS, getMondayFirstWeekday } from '../../workout/model/workout.schedule';
 import { WeekPlanEditorModal } from '../../workout/components/WeekPlanEditorModal';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../shared/theme/tokens';
 import type { WorkoutSession } from '../../workout/model/workout.types';
@@ -110,48 +109,32 @@ export function PlanScreen() {
           </AppText>
         </StaggerItem>
       ) : null}
-      {templates.map((template, templateIndex) => {
-        const usedInSchedule = weeklyProgram.days.some(
-          (day) => day.type === 'workout' && day.templateId === template.id,
-        );
-        return (
-          <AppCard
-            key={template.id}
-            className="mt-3"
-            enterIndex={5 + templateIndex}
-            onPress={() => setTemplateToView(template)}
-            accessibilityLabel={`Открыть шаблон ${template.title}`}
-          >
-            <View className="flex-row items-center">
-              <View
-                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                style={{ backgroundColor: colors.accentSurface }}
-              >
-                <Ionicons name="barbell-outline" size={19} color={colors.accentPrimary} />
-              </View>
-              <View className="flex-1">
-                <AppText variant="bodyL">{template.title}</AppText>
-                <AppText variant="caption" muted>
-                  {template.exercises.length} упражнений ·{' '}
-                  {template.exercises.reduce((s, e) => s + e.sets.length, 0)} подходов
-                  {usedInSchedule ? ' · в расписании' : ''}
-                </AppText>
-              </View>
-              <IconButton
-                size={40}
-                variant="ghost"
-                accessibilityLabel={`Удалить шаблон ${template.title}`}
-                onPress={() => setTemplateToDelete(template)}
-              >
-                <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
-              </IconButton>
-              <View className="ml-1">
-                <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
-              </View>
-            </View>
-          </AppCard>
-        );
-      })}
+      <View className="gap-2">
+        {templates.map((template, templateIndex) => {
+          const scheduleDays = weeklyProgram.days.filter(
+            (day) => day.type === 'workout' && day.templateId === template.id,
+          );
+          const { meta } = getTemplateStats(template);
+
+          return (
+            <StaggerItem key={template.id} index={5 + templateIndex}>
+              <WorkoutTemplateCard
+                mode="browse"
+                title={template.title}
+                meta={meta}
+                inSchedule={scheduleDays.length > 0}
+                scheduleLabel={
+                  scheduleDays.length > 0
+                    ? `В расписании: ${scheduleDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(', ')}`
+                    : undefined
+                }
+                onPress={() => setTemplateToView(template)}
+                onDelete={() => setTemplateToDelete(template)}
+              />
+            </StaggerItem>
+          );
+        })}
+      </View>
 
       <TemplatePreviewSheet
         visible={templateToView != null}

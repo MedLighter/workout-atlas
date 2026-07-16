@@ -66,11 +66,11 @@ export function BottomSheet({
   const scrollNative = Gesture.Native();
 
   const pan = Gesture.Pan()
-    .activeOffsetY(8)
-    .failOffsetX([-32, 32])
+    .activeOffsetY(6)
+    .failOffsetX([-24, 24])
     .simultaneousWithExternalGesture(scrollNative)
     .onUpdate((event) => {
-      if (scrollable && scrollOffset.value > 0) return;
+      if (scrollable && scrollOffset.value > 2) return;
       if (event.translationY > 0) {
         translateY.value = event.translationY;
       }
@@ -111,7 +111,8 @@ export function BottomSheet({
       navigationBarTranslucent={Platform.OS === 'android'}
     >
       <GestureHandlerRootView style={styles.root}>
-        <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="Закрыть">
+        <View style={styles.overlay}>
+          <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
           <GestureDetector gesture={pan}>
             <Animated.View
               entering={SlideInDown.duration(MOTION.normal)
@@ -121,10 +122,7 @@ export function BottomSheet({
               exiting={SlideOutDown.duration(MOTION.fast)}
               style={[styles.sheetHost, sheetStyle]}
             >
-              <Pressable
-                style={[styles.sheet, { maxHeight }]}
-                onPress={(event) => event.stopPropagation()}
-              >
+              <View style={[styles.sheet, { maxHeight }]}>
                 <View style={styles.header}>
                   <View style={styles.handle} />
                 </View>
@@ -148,10 +146,10 @@ export function BottomSheet({
                 ) : (
                   <View style={bodyStyle}>{children}</View>
                 )}
-              </Pressable>
+              </View>
             </Animated.View>
           </GestureDetector>
-        </Pressable>
+        </View>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -164,6 +162,9 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheetHost: {

@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { BottomSheet } from '../../../shared/ui/BottomSheet';
 import { AppText } from '../../../shared/ui/AppText';
+import { AppCard } from '../../../shared/ui/AppCard';
 import { WEEKDAY_LABELS } from '../../workout/model/workout.schedule';
 import { formatPreviousSet } from '../../workout/utils/workoutStatus';
 import type { Exercise, WeeklyProgram, WorkoutSession, WorkoutSet } from '../../workout/model/workout.types';
@@ -44,49 +45,60 @@ export function TemplatePreviewSheet({
     <BottomSheet visible={visible && template != null} onClose={onClose} scrollable maxHeightRatio={0.82}>
       {template ? (
         <>
-      <AppText variant="h2" className="mb-1">
-        {template.title}
-      </AppText>
-      <AppText variant="bodyM" muted className="mb-4">
-        {template.exercises.length} упражнений · {totalSets} подходов · {template.unit}
-      </AppText>
+          <AppText variant="h2" className="mb-1">
+            {template.title}
+          </AppText>
+          <AppText variant="bodyM" muted className="mb-4">
+            {template.exercises.length} упражнений · {totalSets} подходов · {template.unit}
+          </AppText>
 
-      {scheduleDays.length > 0 ? (
-        <View
-          className="rounded-md border border-border-subtle px-3 py-2.5 mb-4"
-          style={{ backgroundColor: colors.accentSurface }}
-        >
-          <AppText variant="caption" className="text-accent mb-1">
-            В расписании
-          </AppText>
-          <AppText variant="bodyM">
-            {scheduleDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(', ')}
-          </AppText>
-        </View>
-      ) : null}
-
-      <AppText variant="caption" muted className="mb-2">
-        Состав
-      </AppText>
-
-      {template.exercises.map((exercise, index) => (
-        <View
-          key={exercise.id}
-          className={`py-3 ${index < template.exercises.length - 1 ? 'border-b border-border-subtle' : ''}`}
-        >
-          <AppText variant="bodyL" className="mb-1">
-            {index + 1}. {exercise.name}
-          </AppText>
-          <AppText variant="caption" muted>
-            {summarizeSets(exercise, template.unit)}
-          </AppText>
-          {exercise.muscleGroups?.length ? (
-            <AppText variant="caption" muted className="mt-1">
-              {exercise.muscleGroups.join(' · ')}
-            </AppText>
+          {scheduleDays.length > 0 ? (
+            <View
+              className="rounded-md border px-3 py-2.5 mb-4"
+              style={{ borderColor: colors.accentBorder, backgroundColor: colors.accentSurface }}
+            >
+              <AppText variant="caption" className="text-accent mb-1">
+                В расписании
+              </AppText>
+              <AppText variant="bodyM">
+                {scheduleDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(', ')}
+              </AppText>
+            </View>
           ) : null}
-        </View>
-      ))}
+
+          <AppText variant="caption" muted className="mb-3">
+            Состав тренировки
+          </AppText>
+
+          <View className="gap-2">
+            {template.exercises.map((exercise, index) => (
+              <AppCard key={exercise.id}>
+                <View className="flex-row items-start gap-3">
+                  <View
+                    className="w-7 h-7 rounded-full items-center justify-center mt-0.5"
+                    style={{ backgroundColor: colors.accentSurface }}
+                  >
+                    <AppText variant="caption" className="text-accent">
+                      {index + 1}
+                    </AppText>
+                  </View>
+                  <View className="flex-1">
+                    <AppText variant="bodyL" className="mb-1">
+                      {exercise.name}
+                    </AppText>
+                    <AppText variant="caption" muted>
+                      {summarizeSets(exercise, template.unit)}
+                    </AppText>
+                    {exercise.muscleGroups?.length ? (
+                      <AppText variant="caption" muted className="mt-1">
+                        {exercise.muscleGroups.join(' · ')}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
+              </AppCard>
+            ))}
+          </View>
         </>
       ) : null}
     </BottomSheet>

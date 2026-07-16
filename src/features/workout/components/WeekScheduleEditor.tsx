@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ScheduleDay, WeeklyProgram, WorkoutSession } from '../model/workout.types';
 import {
@@ -13,9 +13,11 @@ import {
   type SchedulePresetId,
 } from '../model/workout.schedule';
 import { AppText } from '../../../shared/ui/AppText';
-import { AppButton } from '../../../shared/ui/AppButton';
 import { RadioCard } from '../../../shared/ui/RadioCard';
-import { colors } from '../../../shared/theme/tokens';
+import { PressableScale } from '../../../shared/ui/PressableScale';
+import { WorkoutTemplateCard, getTemplateStats } from '../../../shared/ui/WorkoutTemplateCard';
+import { colors, radii } from '../../../shared/theme/tokens';
+import { MOTION } from '../../../shared/ui/animations/motion';
 
 interface WeekScheduleEditorProps {
   program: WeeklyProgram;
@@ -76,10 +78,13 @@ export function WeekScheduleEditor({
     setActiveWeekday(null);
   };
 
+  const activeDay = activeWeekday !== null ? program.days.find((item) => item.weekday === activeWeekday) : null;
+  const isRestSelected = activeDay?.type === 'rest';
+
   return (
     <View>
       <View className="mb-3 px-1">
-        <AppText variant="caption" className="text-emerald-400 mb-1">
+        <AppText variant="caption" className="text-accent mb-1">
           {formatWorkoutDaysSummary(program)}
         </AppText>
         <AppText variant="caption" muted>
@@ -90,62 +95,80 @@ export function WeekScheduleEditor({
       {showPresets && onApplyPreset ? (
         <View className="flex-row flex-wrap gap-2 mb-4">
           {SCHEDULE_PRESETS.map((preset) => (
-            <Pressable
+            <PressableScale
               key={preset.id}
               onPress={() => handlePreset(preset.id)}
-              className="flex-1 min-w-[96px] rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 active:bg-zinc-800"
+              scaleTo={MOTION.cardPressScale}
+              style={{
+                flexGrow: 1,
+                flexBasis: '30%',
+                minWidth: 96,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                backgroundColor: colors.surfacePrimary,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+              }}
             >
-              <AppText variant="row" className="text-sm mb-0.5">
-                {preset.label}
-              </AppText>
-              <AppText variant="caption" muted>
+              <AppText variant="bodyM">{preset.label}</AppText>
+              <AppText variant="caption" muted className="mt-0.5">
                 {preset.subtitle}
               </AppText>
-            </Pressable>
+            </PressableScale>
           ))}
         </View>
       ) : null}
 
-      <View className="flex-row gap-2 mb-3">
+      <View className="flex-row gap-1.5 mb-3">
         {program.days.map((day) => {
           const isWorkout = day.type === 'workout';
           const isActive = activeWeekday === day.weekday;
 
           return (
-            <Pressable
+            <PressableScale
               key={day.weekday}
               onPress={() => handleDayPress(day)}
-              className={`flex-1 rounded-2xl border px-1.5 py-2.5 items-center active:opacity-90 ${
-                isActive
-                  ? 'bg-emerald-950/50 border-emerald-500/40'
+              scaleTo={0.98}
+              style={{
+                flex: 1,
+                borderRadius: radii.sm,
+                borderWidth: 1,
+                paddingHorizontal: 4,
+                paddingVertical: 10,
+                alignItems: 'center',
+                backgroundColor: isActive
+                  ? colors.accentSurfaceStrong
                   : isWorkout
-                    ? 'bg-zinc-900 border-emerald-500/20'
-                    : 'bg-zinc-950 border-zinc-800'
-              }`}
+                    ? colors.surfacePrimary
+                    : colors.surfaceSoft,
+                borderColor: isActive
+                  ? colors.accentBorder
+                  : isWorkout
+                    ? colors.accentBorder
+                    : colors.borderSubtle,
+              }}
             >
-              <AppText
-                variant="caption"
-                className={isWorkout ? 'text-emerald-400' : ''}
-                muted={!isWorkout}
-              >
+              <AppText variant="caption" muted={!isWorkout && !isActive} className={isWorkout ? 'text-accent' : ''}>
                 {WEEKDAY_LABELS[day.weekday]}
               </AppText>
               <View className="my-1.5">
                 <Ionicons
                   name={isWorkout ? 'barbell-outline' : 'moon-outline'}
                   size={compact ? 16 : 18}
-                  color={isWorkout ? '#34D399' : '#71717A'}
+                  color={isWorkout ? colors.accentBright : colors.textMuted}
                 />
               </View>
               <AppText
                 variant="caption"
                 numberOfLines={2}
-                className={`text-center text-[10px] leading-3 ${isWorkout ? 'text-emerald-300' : ''}`}
+                className="text-center"
                 muted={!isWorkout}
+                style={{ fontSize: 10, lineHeight: 12, color: isWorkout ? colors.accentBright : undefined }}
               >
-                {isWorkout ? day.title : 'Отдых'}
+                {isWorkout ? day.title.replace('Full Body ', '') : 'Отдых'}
               </AppText>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -153,50 +176,49 @@ export function WeekScheduleEditor({
       {activeWeekday !== null ? (
         <View
           className="rounded-2xl border p-4 mb-2"
-          style={{ borderColor: colors.borderSubtle, backgroundColor: colors.surfacePrimary }}
+          style={{ borderColor: colors.borderSubtle, backgroundColor: colors.surfaceSoft }}
         >
-          <AppText variant="section" className="mb-1">
+          <AppText variant="h3" className="mb-1">
             {WEEKDAY_NAMES[activeWeekday]}
           </AppText>
-          <AppText variant="caption" muted className="mb-3">
+          <AppText variant="caption" muted className="mb-4">
             Выбери тренировку или поставь отдых
           </AppText>
 
-          <AppButton
-            compact
-            variant="secondary"
-            label="Отдых"
-            onPress={() => handleSetRest(activeWeekday)}
-            className="mb-3"
-          />
+          <View className="gap-2">
+            <RadioCard
+              icon="moon-outline"
+              label="Отдых"
+              description="Без тренировки в этот день"
+              selected={isRestSelected}
+              onPress={() => handleSetRest(activeWeekday)}
+            />
 
-          {templates.length === 0 ? (
-            <AppText variant="caption" muted>
-              Нет шаблонов — импортируй тренировку в библиотеку
-            </AppText>
-          ) : (
-            <View className="gap-2">
-              {templates.map((template) => {
-                const day = program.days.find((item) => item.weekday === activeWeekday);
-                const selected = day?.type === 'workout' && day.templateId === template.id;
-                const totalSets = template.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+            {templates.length === 0 ? (
+              <AppText variant="caption" muted className="px-1 pt-1">
+                Нет шаблонов — импортируй тренировку или создай программу
+              </AppText>
+            ) : (
+              templates.map((template) => {
+                const selected = activeDay?.type === 'workout' && activeDay.templateId === template.id;
+                const { meta } = getTemplateStats(template);
 
                 return (
-                  <RadioCard
+                  <WorkoutTemplateCard
                     key={template.id}
-                    icon="barbell-outline"
-                    label={template.title}
-                    meta={`${template.exercises.length} упражнений · ${totalSets} подходов`}
+                    mode="select"
+                    title={template.title}
+                    meta={meta}
                     selected={selected}
                     onPress={() => {
-                      if (!day) return;
-                      handleSelectTemplate(day, template);
+                      if (!activeDay) return;
+                      handleSelectTemplate(activeDay, template);
                     }}
                   />
                 );
-              })}
-            </View>
-          )}
+              })
+            )}
+          </View>
         </View>
       ) : null}
 
