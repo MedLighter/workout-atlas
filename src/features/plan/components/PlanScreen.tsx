@@ -11,7 +11,7 @@ import { useWorkoutStore } from '../../workout/model/workout.store';
 import { WEEKDAY_LABELS, getMondayFirstWeekday } from '../../workout/model/workout.schedule';
 import { WeekPlanEditorModal } from '../../workout/components/WeekPlanEditorModal';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../shared/theme/tokens';
+import { colors, spacing } from '../../../shared/theme/tokens';
 import type { WorkoutSession } from '../../workout/model/workout.types';
 import { TemplatePreviewSheet } from './TemplatePreviewSheet';
 import { StaggerItem } from '../../../shared/ui/animations/StaggerItem';
@@ -39,36 +39,45 @@ export function PlanScreen() {
   const workoutCount = weeklyProgram.days.filter((d) => d.type === 'workout').length;
 
   return (
-    <SafeScreen scrollable reserveTabBar>
+    <SafeScreen scrollable reserveTabBar extraBottomSpacing={spacing.sm}>
       <StaggerItem index={0}>
-        <View className="mb-5 pt-2">
+        <View style={{ marginBottom: spacing.xxl }}>
           <AppText variant="h1">План</AppText>
-          <AppText variant="caption" muted className="mt-1">
+          <AppText variant="caption" muted style={{ marginTop: spacing.xs }}>
             {workoutCount} тренировки в неделю
           </AppText>
         </View>
       </StaggerItem>
 
       <StaggerItem index={1}>
-        <View className="flex-row justify-between mb-5">
+        <View className="flex-row gap-1" style={{ marginBottom: spacing.xxl }}>
           {WEEKDAY_LABELS.map((label, index) => {
             const day = weeklyProgram.days.find((d) => d.weekday === index);
             const isWorkout = day?.type === 'workout';
             const short = isWorkout ? day.title.replace('Full Body ', '') : '—';
             const isToday = index === today;
             return (
-              <FadeSlideIn key={label} delay={index * 28} direction="down">
+              <FadeSlideIn key={label} delay={index * 28} direction="down" className="flex-1">
                 <View className="items-center">
-                  <AppText variant="caption" muted>{label}</AppText>
+                  <AppText variant="caption" muted style={{ marginBottom: spacing.sm }}>
+                    {label}
+                  </AppText>
                   <View
-                    className="w-9 h-9 rounded-full items-center justify-center mt-1 border"
+                    className="w-10 h-10 rounded-full items-center justify-center border"
                     style={{
                       backgroundColor: isToday ? colors.accentSurfaceStrong : colors.surfacePrimary,
                       borderColor: isToday ? colors.accentBorder : colors.borderSubtle,
-                      transform: [{ scale: isToday ? 1.06 : 1 }],
+                      transform: [{ scale: isToday ? 1.04 : 1 }],
                     }}
                   >
-                    <AppText variant="caption" className={isWorkout ? 'text-accent' : ''}>{short}</AppText>
+                    <AppText
+                      variant="caption"
+                      className={isWorkout ? 'text-accent' : ''}
+                      style={{ fontSize: 11, lineHeight: 14 }}
+                      numberOfLines={1}
+                    >
+                      {short}
+                    </AppText>
                   </View>
                 </View>
               </FadeSlideIn>
@@ -77,64 +86,85 @@ export function PlanScreen() {
         </View>
       </StaggerItem>
 
-      <AppCard elevated flush className="mb-6" enterIndex={2}>
+      <AppCard elevated flush className="mb-8" enterIndex={2}>
         <LinearGradient
           colors={['rgba(12,84,69,0.58)', 'rgba(10,28,28,0.4)', colors.surfacePrimary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ padding: 18, width: '100%' }}
+          style={{ padding: spacing.lg, width: '100%' }}
         >
           <AppText variant="h2">{weeklyProgram.name}</AppText>
-          <AppText variant="bodyM" muted className="mb-1">{workoutCount} тренировки в неделю</AppText>
+          <AppText variant="bodyM" muted style={{ marginTop: spacing.xs }}>
+            {workoutCount} тренировки в неделю
+          </AppText>
           {nextWorkout ? (
-            <AppText variant="bodyM" muted className="mb-4">Следующая: {nextWorkout.title}</AppText>
-          ) : null}
-          <AppButton label="Открыть программу" onPress={openPlanEditor} className="mb-2" />
+            <AppText variant="bodyM" muted style={{ marginTop: spacing.xs, marginBottom: spacing.lg }}>
+              Следующая: {nextWorkout.title}
+            </AppText>
+          ) : (
+            <View style={{ height: spacing.lg }} />
+          )}
+          <AppButton label="Открыть программу" onPress={openPlanEditor} className="mb-3" />
           <AppButton label="Изменить расписание" variant="ghost" onPress={openPlanEditor} />
         </LinearGradient>
       </AppCard>
 
-      <StaggerItem index={3}>
-        <AppText variant="h3" className="mb-3">Добавить программу</AppText>
-        <AppButton label="Импортировать программу" variant="secondary" onPress={() => router.push('/import')} className="mb-3" />
-        <AppButton label="Создать новую" variant="secondary" onPress={() => router.push('/generator')} className="mb-3" />
+      <StaggerItem index={3} className="mb-8">
+        <AppText variant="h3" className="mb-4">
+          Добавить программу
+        </AppText>
+        <AppButton
+          label="Импортировать программу"
+          variant="secondary"
+          onPress={() => router.push('/import')}
+          className="mb-3"
+        />
+        <AppButton
+          label="Создать новую"
+          variant="secondary"
+          onPress={() => router.push('/generator')}
+          className="mb-3"
+        />
         <AppButton label="Собрать вручную" variant="ghost" onPress={() => router.push('/manual-program')} />
       </StaggerItem>
 
       {templates.length > 0 ? (
-        <StaggerItem index={4} className="mt-6 mb-2">
-          <AppText variant="h3">Шаблоны</AppText>
-          <AppText variant="caption" muted className="mt-1">
-            Нажми на шаблон, чтобы посмотреть упражнения
-          </AppText>
-        </StaggerItem>
-      ) : null}
-      <View className="gap-2">
-        {templates.map((template, templateIndex) => {
-          const scheduleDays = weeklyProgram.days.filter(
-            (day) => day.type === 'workout' && day.templateId === template.id,
-          );
-          const { meta } = getTemplateStats(template);
+        <>
+          <StaggerItem index={4} className="mb-4">
+            <AppText variant="h3">Шаблоны</AppText>
+            <AppText variant="caption" muted style={{ marginTop: spacing.sm }}>
+              Нажми на шаблон, чтобы посмотреть упражнения
+            </AppText>
+          </StaggerItem>
 
-          return (
-            <StaggerItem key={template.id} index={5 + templateIndex}>
-              <WorkoutTemplateCard
-                mode="browse"
-                title={template.title}
-                meta={meta}
-                inSchedule={scheduleDays.length > 0}
-                scheduleLabel={
-                  scheduleDays.length > 0
-                    ? `В расписании: ${scheduleDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(', ')}`
-                    : undefined
-                }
-                onPress={() => setTemplateToView(template)}
-                onDelete={() => setTemplateToDelete(template)}
-              />
-            </StaggerItem>
-          );
-        })}
-      </View>
+          <View style={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+            {templates.map((template, templateIndex) => {
+              const scheduleDays = weeklyProgram.days.filter(
+                (day) => day.type === 'workout' && day.templateId === template.id,
+              );
+              const { meta } = getTemplateStats(template);
+
+              return (
+                <StaggerItem key={template.id} index={5 + templateIndex}>
+                  <WorkoutTemplateCard
+                    mode="browse"
+                    title={template.title}
+                    meta={meta}
+                    inSchedule={scheduleDays.length > 0}
+                    scheduleLabel={
+                      scheduleDays.length > 0
+                        ? `В расписании: ${scheduleDays.map((day) => WEEKDAY_LABELS[day.weekday]).join(', ')}`
+                        : undefined
+                    }
+                    onPress={() => setTemplateToView(template)}
+                    onDelete={() => setTemplateToDelete(template)}
+                  />
+                </StaggerItem>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
 
       <TemplatePreviewSheet
         visible={templateToView != null}
