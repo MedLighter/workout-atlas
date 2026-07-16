@@ -18,17 +18,26 @@ import {
   type ProgramChoice,
 } from '../model/onboarding.store';
 
-const GOALS: { id: TrainingGoal; label: string }[] = [
-  { id: 'muscle', label: 'Набрать мышцы' },
-  { id: 'strength', label: 'Стать сильнее' },
-  { id: 'weight_loss', label: 'Снизить вес' },
-  { id: 'maintain', label: 'Поддерживать форму' },
+const GOALS: {
+  id: TrainingGoal;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'muscle', label: 'Набрать мышцы', icon: 'fitness-outline' },
+  { id: 'strength', label: 'Стать сильнее', icon: 'barbell-outline' },
+  { id: 'weight_loss', label: 'Снизить вес', icon: 'trending-down-outline' },
+  { id: 'maintain', label: 'Поддерживать форму', icon: 'pulse-outline' },
 ];
 
-const PROGRAM_CHOICES: { id: ProgramChoice; label: string; description: string }[] = [
-  { id: 'import', label: 'Да, добавлю свою', description: 'Текст, Markdown или JSON' },
-  { id: 'generate', label: 'Нет, помогите создать', description: 'Короткий мастер' },
-  { id: 'manual', label: 'Соберу вручную', description: 'Пустой шаблон' },
+const PROGRAM_CHOICES: {
+  id: ProgramChoice;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'import', label: 'Да, добавлю свою', description: 'Текст, Markdown или JSON', icon: 'document-text-outline' },
+  { id: 'generate', label: 'Нет, помогите создать', description: 'Короткий мастер', icon: 'sparkles-outline' },
+  { id: 'manual', label: 'Соберу вручную', description: 'Пустой шаблон', icon: 'create-outline' },
 ];
 
 export function OnboardingScreen() {
@@ -127,14 +136,17 @@ export function OnboardingScreen() {
             <AppText variant="bodyM" muted className="mb-6">
               Выбери главную цель. Её можно изменить позже.
             </AppText>
-            {GOALS.map((item) => (
-              <RadioCard
-                key={item.id}
-                label={item.label}
-                selected={goal === item.id}
-                onPress={() => setGoal(item.id)}
-              />
-            ))}
+            <View className="gap-2">
+              {GOALS.map((item) => (
+                <RadioCard
+                  key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  selected={goal === item.id}
+                  onPress={() => setGoal(item.id)}
+                />
+              ))}
+            </View>
           </View>
         ) : null}
 
@@ -146,15 +158,18 @@ export function OnboardingScreen() {
             <AppText variant="bodyM" muted className="mb-6">
               Выбери удобный способ начать.
             </AppText>
-            {PROGRAM_CHOICES.map((item) => (
-              <RadioCard
-                key={item.id}
-                label={item.label}
-                description={item.description}
-                selected={programChoice === item.id}
-                onPress={() => setProgramChoice(item.id)}
-              />
-            ))}
+            <View className="gap-2">
+              {PROGRAM_CHOICES.map((item) => (
+                <RadioCard
+                  key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  description={item.description}
+                  selected={programChoice === item.id}
+                  onPress={() => setProgramChoice(item.id)}
+                />
+              ))}
+            </View>
           </View>
         ) : null}
       </FadeSlideIn>

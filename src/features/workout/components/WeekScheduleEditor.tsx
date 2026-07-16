@@ -14,6 +14,8 @@ import {
 } from '../model/workout.schedule';
 import { AppText } from '../../../shared/ui/AppText';
 import { AppButton } from '../../../shared/ui/AppButton';
+import { RadioCard } from '../../../shared/ui/RadioCard';
+import { colors } from '../../../shared/theme/tokens';
 
 interface WeekScheduleEditorProps {
   program: WeeklyProgram;
@@ -149,7 +151,10 @@ export function WeekScheduleEditor({
       </View>
 
       {activeWeekday !== null ? (
-        <View className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 mb-2">
+        <View
+          className="rounded-2xl border p-4 mb-2"
+          style={{ borderColor: colors.borderSubtle, backgroundColor: colors.surfacePrimary }}
+        >
           <AppText variant="section" className="mb-1">
             {WEEKDAY_NAMES[activeWeekday]}
           </AppText>
@@ -174,32 +179,20 @@ export function WeekScheduleEditor({
               {templates.map((template) => {
                 const day = program.days.find((item) => item.weekday === activeWeekday);
                 const selected = day?.type === 'workout' && day.templateId === template.id;
+                const totalSets = template.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
 
                 return (
-                  <Pressable
+                  <RadioCard
                     key={template.id}
+                    icon="barbell-outline"
+                    label={template.title}
+                    meta={`${template.exercises.length} упражнений · ${totalSets} подходов`}
+                    selected={selected}
                     onPress={() => {
                       if (!day) return;
                       handleSelectTemplate(day, template);
                     }}
-                    className={`rounded-xl border px-3 py-2.5 flex-row items-center justify-between ${
-                      selected
-                        ? 'bg-emerald-950/30 border-emerald-500/40'
-                        : 'bg-zinc-950 border-zinc-800'
-                    }`}
-                  >
-                    <View className="flex-1 pr-2">
-                      <AppText variant="body" className="text-sm">
-                        {template.title}
-                      </AppText>
-                      <AppText variant="caption" muted>
-                        {template.exercises.length} упражнений
-                      </AppText>
-                    </View>
-                    {selected ? (
-                      <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                    ) : null}
-                  </Pressable>
+                  />
                 );
               })}
             </View>

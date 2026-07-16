@@ -169,14 +169,23 @@ function StepLimitations({ limitations, note, onToggle, onNote, onBack, onNext }
     <View>
       <AppText variant="h1" className="mb-2">Есть ли движения, которые нельзя выполнять?</AppText>
       <AppText variant="bodyM" muted className="mb-6">Мы только исключим неподходящие упражнения.</AppText>
-      <RadioCard
-        label="Ограничений нет"
-        selected={limitations.length === 0}
-        onPress={() => limitations.slice().forEach(onToggle)}
-      />
-      {items.map((item) => (
-        <RadioCard key={item} label={item.charAt(0).toUpperCase() + item.slice(1)} selected={limitations.includes(item)} onPress={() => onToggle(item)} />
-      ))}
+      <View className="gap-2">
+        <RadioCard
+          icon="shield-checkmark-outline"
+          label="Ограничений нет"
+          selected={limitations.length === 0}
+          onPress={() => limitations.slice().forEach(onToggle)}
+        />
+        {items.map((item) => (
+          <RadioCard
+            key={item}
+            mode="checkbox"
+            label={item.charAt(0).toUpperCase() + item.slice(1)}
+            selected={limitations.includes(item)}
+            onPress={() => onToggle(item)}
+          />
+        ))}
+      </View>
       <TextField
         label="Заметка"
         placeholder="Болит плечо при жиме над головой"
